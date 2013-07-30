@@ -1,0 +1,360 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <sched.h>
+#include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+
+#include <sys/wait.h>
+#include <numa.h>
+
+#include <sys/time.h>
+#include <pcap/pcap.h>
+#include <pthread.h>
+
+#include "../../include/ps.h"
+
+#define MAX_CORES 4
+
+#define MAX_CHUNKS 10000
+
+pthread_mutex_t sem_copy[MAX_CORES], sem_capture[MAX_CORES];
+
+struct ps_chunk buf[MAX_CORES][MAX_CHUNKS];
+u_int32_t offset_write[MAX_CORES],offset_read[MAX_CORES];
+
+int num_threads, chunk_size;
+
+pthread_t captureThreadId[MAX_CORES]; 
+pthread_t copyThreadId[MAX_CORES];
+
+int num_devices;
+struct ps_device devices[MAX_DEVICES];
+
+int device_attached;
+struct ps_handle handles[MAX_CORES];
+
+char filename[100];
+
+#define THR_UTILIZATION 95.0
+char directory[100]=".";
+u_int32_t snaplen=1514;
+u_int32_t size=0;
+
+void print_usage(char *argv0)
+{
+	fprintf(stderr, "Usage: %s <interface to monitor> <number of threads/queues> <chunk size> <directory> <file size(in MB)>\n",
+			argv0);
+
+	exit(2);
+}
+
+void parse_opt(int argc, char **argv)
+{
+	int j;
+
+	if (argc!=6)
+		print_usage(argv[0]);
+
+	
+	int ifindex=-1;
+	for (j = 0; j < num_devices; j++) {
+		if (strcmp(argv[1], devices[j].name) != 0)
+			continue;
+
+		ifindex = devices[j].ifindex;
+		break;
+	}
+
+	if (ifindex == -1) {
+		fprintf(stderr, "Interface %s does not exist!\n", argv[1]);
+		exit(4);
+	}
+
+	device_attached = ifindex;
+	
+	num_threads=atoi(argv[2]);
+	if(num_threads<=0 || num_threads>MAX_CORES){
+		fprintf(stderr, "Num. threads, %s, too much large!\n",argv[2]);
+	}
+	chunk_size=atoi(argv[3]);
+	if(chunk_size<=0 || chunk_size>MAX_CHUNK_SIZE){
+		fprintf(stderr, "Chunk size %s, too much large!\n",argv[2]);
+	}
+	strcpy(directory,argv[4]);
+	size=atoi(argv[5]);
+		
+
+	
+}
+
+struct ps_chunk* buf_copy[MAX_CORES];
+u_int64_t filesize_copy[MAX_CORES];
+
+int getUtilization(char* directory_name,u_int64_t* used,u_int64_t *available,int *utilization){
+	char command[1000];
+	sprintf(command,"sudo df %s | gawk '{if(match($5,\"([0-9]+)(%%)\",a))print $3,$4,a[1];}'",directory_name);
+	FILE* out_utilization=popen(command,"r");
+	if(fscanf(out_utilization,"%lu %lu %d",used,available,utilization)==3){
+		pclose(out_utilization);
+		return *utilization;
+	}
+	pclose(out_utilization);
+	return -1;
+}
+
+char* getDirectory(char* directory_file,char *directory_name){
+	char file[1000];
+	u_int64_t used,available;
+	int utilization;
+	u_int8_t found=0;
+	FILE* fdir=fopen(directory_file,"r");
+
+	if(fdir==NULL){
+		perror(directory);
+		exit(-1);
+	}
+	while(fgets(file, 1000, fdir)&&found==0){
+		file[strlen(file)-1]='\0';
+		int ret=getUtilization(file,&used,&available,&utilization);
+		if(ret>=0 && (double)(used+size)/(available+used)*100<THR_UTILIZATION){
+			strcpy(directory_name,file);
+			found=1;
+		}
+	}
+	fclose(fdir);
+	if(found==1)
+		return directory_name;
+	else
+		return NULL;
+}
+
+void *copy(void *parameter){
+	u_int64_t my_core=(u_int64_t)parameter;
+	int j;
+	struct pcap_pkthdr h;
+	pcap_dumper_t* pdump=NULL;
+	pcap_t *p=NULL;
+	struct timeval begin;
+	u_int64_t bytes=0,previous_capture;
+	char capture_filename[1000],directory_name[1000];
+
+	//fijar en un core
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	CPU_SET(my_core+num_threads,&mask);
+	if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&mask) <0) {
+		perror("pthread_setaffinity_np");
+	}
+	if(getDirectory(directory,directory_name)==NULL){
+		printf("No directory available\n");
+		exit(-1);
+	}
+	gettimeofday(&begin,NULL);
+	previous_capture=begin.tv_sec;
+	sprintf(capture_filename,"%s/%lu_%lu.pcap",directory_name,previous_capture,my_core);
+	printf("capture_filename:%s\n",capture_filename);
+	//abrir fichero
+	p=pcap_open_dead(DLT_EN10MB,snaplen);
+	pdump=pcap_dump_open(p,capture_filename);
+	if(pdump==NULL){
+		fprintf(stderr,"Error in pcap_dump_open\n");
+		exit(-1);
+	}
+	bytes=0;
+	//en bucle
+	while(1){
+		if(bytes/1024.0/1024.0>size){
+			pcap_dump_close(pdump);
+			if(getDirectory(directory,directory_name)==NULL){
+						printf("No directory available\n");
+						exit(-1);
+			}
+			gettimeofday(&begin,NULL);
+			previous_capture=begin.tv_sec;
+			sprintf(capture_filename,"%s/%lu_%lu.pcap",directory_name,previous_capture,my_core);
+			//abrir fichero
+			pdump=pcap_dump_open(p,capture_filename);
+			if(pdump==NULL){
+				fprintf(stderr,"Error in pcap_dump_open\n");
+				exit(-1);
+			}
+			bytes=0;	
+			
+		}
+		if(offset_read[my_core]!=offset_write[my_core]){
+			int i=offset_read[my_core];
+			for(j=0;j<buf[my_core][i].cnt;j++){
+				h.ts.tv_sec=buf[my_core][i].info[j].tv.tv_sec;
+				h.ts.tv_usec=buf[my_core][i].info[j].tv.tv_usec;
+				if(buf[my_core][i].info[j].len<snaplen || snaplen==0)
+					hcap.caplen=buf[my_core][i].info[j].len;
+				else
+					hcap.caplen=snaplen;
+				h.len=buf[my_core][i].info[j].len;
+				pcap_dump((u_char*)pdump,&h,(u_char *)(buf[my_core][i].buf+buf[my_core][i].info[j].offset));
+				bytes+=h.caplen;
+			}
+			offset_read[my_core]=(offset_read[my_core]+1)%MAX_CHUNKS;
+		}
+	}
+
+}
+int ps_alloc_chunk_user(struct ps_chunk *chunk){
+	memset(chunk, 0, sizeof(*chunk));
+
+	chunk->info = (struct ps_pkt_info *)malloc(
+			sizeof(struct ps_pkt_info) * chunk_size);
+	if (!chunk->info)
+		return -1;
+
+	chunk->buf = (char *)malloc(MAX_PACKET_SIZE * chunk_size);
+	if ((long)chunk->buf == -1)
+		return -1;
+	return 0;
+}
+
+
+void *capture(void *parameter)
+{
+	u_int64_t my_core=(u_int64_t)parameter;
+	struct ps_handle *handle = &handles[my_core];
+	struct ps_chunk chunk;
+	int nbuf=0,nchunks=0;
+	u_int64_t filesize=0;
+
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	CPU_SET(my_core,&mask);
+	if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&mask) <0) {
+		perror("pthread_setaffinity_np");
+	}
+
+	int working = 0;
+
+	assert(ps_init_handle(handle) == 0);
+
+	struct ps_queue queue;
+	if(my_core > devices[device_attached].num_rx_queues){
+		printf("%u %lu\n",devices[device_attached].num_rx_queues,my_core);
+		exit(-1);
+	}
+
+	working = 1;
+	queue.ifindex = device_attached;
+	queue.qidx = my_core;
+
+	printf("attaching RX queue xge%d:%d to CPU%lu\n", queue.ifindex, queue.qidx, my_core);
+	assert(ps_attach_rx_device(handle, &queue) == 0);
+
+	if (!working)
+		goto done;
+
+	assert(ps_alloc_chunk(handle, &chunk) == 0);
+
+	int i;
+	printf("reservando chunks %lu\n",my_core);
+	for(i=0;i<MAX_CHUNKS;i++){
+		if(ps_alloc_chunk_user(&(buf[my_core][i]))!=0){
+			printf("Error reservando chunk i:%u en core:%lu\n",i,my_core);
+			exit(-1);
+		}
+	}
+	printf("reservados %lu\n",my_core);
+	filesize=0;
+	nbuf=0;
+	nchunks=0;
+
+	chunk.cnt = chunk_size;
+	chunk.recv_blocking = 1;
+
+	offset_write[my_core]=0;
+	offset_read[my_core]=0;
+	//crea hilo para copia
+	pthread_create (&copyThreadId[my_core], NULL, copy, (void*)my_core);
+
+
+	struct timeval tv;
+	u_int64_t previous=0,current=0;
+	u_int64_t previous_packets,current_packets;
+	u_int64_t previous_bytes,current_bytes=0;
+	
+	gettimeofday(&tv,NULL);
+	previous=tv.tv_sec;
+	previous_packets=handle->rx_packets[device_attached];
+	previous_bytes=handle->rx_bytes[device_attached];
+
+	for (;;) {
+		int ret = ps_recv_chunk(handle, &chunk);
+		current=chunk.info[0].tv.tv_sec;
+		//printf("ret:%u previous:%lu current:%lu\n",ret,previous,current);
+		if(current>previous){
+			current_packets=handle->rx_packets[device_attached];
+			printf("q%lu:%lupps %luMbps\n",my_core,current_packets-previous_packets,(current_bytes-previous_bytes)*8/1000000);
+			previous=current;
+			previous_packets=current_packets;
+			previous_bytes=current_bytes;		
+		}
+	
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+
+			if (!chunk.recv_blocking && errno == EWOULDBLOCK)
+				break;
+
+			assert(0);
+		}
+		else{
+			//copy chunk
+			buf[my_core][nchunks].cnt=ret;
+			memcpy(buf[my_core][nchunks].info,chunk.info,ret*sizeof(struct ps_pkt_info));
+			for(i=0;i<ret;i++){
+				memcpy(buf[my_core][nchunks].buf+chunk.info[i].offset,chunk.buf+chunk.info[i].offset,chunk.info[i].len);
+				current_bytes+=chunk.info[i].len;
+				filesize+=chunk.info[i].len;
+			}
+			
+			//update variables
+			offset_write[my_core]=(offset_write[my_core]+1)%MAX_CHUNKS;
+			nchunks=offset_write[my_core];
+
+		}
+
+		assert(ret >= 0);
+	}
+
+done:
+	ps_close_handle(handle);
+	return NULL;
+}
+
+int main(int argc, char **argv)
+{
+	u_int64_t i;
+
+	num_devices = ps_list_devices(devices);
+	if (num_devices == -1) {
+		perror("ps_list_devices");
+		exit(1);
+	}
+
+	parse_opt(argc, argv);
+
+	for (i = 0; i < num_threads; i++){
+		pthread_mutex_init(&sem_copy[i],NULL);
+		pthread_mutex_init(&sem_capture[i],NULL);
+		pthread_create (&captureThreadId[i], NULL, capture, (void*)i);
+	}
+
+	while (1) {
+		sleep(10000);
+	}
+
+	return 0;
+}

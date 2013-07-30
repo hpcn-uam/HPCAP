@@ -1,0 +1,154 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <sched.h>
+#include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+#include <sys/time.h>
+#include <pcap/pcap.h>
+
+#include "../../include/hpcap.h"
+
+#define CAPLEN 65535
+#define MAX_PACKET_LEN 2048
+
+#define PKT_LIMIT 15000000
+
+int main(int argc, char **argv)
+{
+	FILE* fraw;
+	pcap_t* pcap_open=NULL;
+	pcap_dumper_t* pcapture=NULL;
+	u_char buf[4096];
+	struct pcap_pkthdr h;
+	u_int32_t secs,nsecs;
+	u_int32_t len,lastlen;
+	int i=0,j=0,ret=0;
+	char filename[100];
+	u_int64_t filesize=0;
+
+	if( argc != 3 )
+	{
+		printf("Uso: %s <fichero_RAW_de_entrada> <fichero_PCAP_de_salida>\n", argv[0]);
+		exit(-1);
+	}
+
+
+	fraw=fopen(argv[1],"r");
+	if( !fraw )
+	{
+		perror("fopen");
+		exit(-1);
+	}
+	
+	while(1)
+	{
+		//abrir fichero
+		sprintf(filename,"%s_%d.pcap",argv[2],j);
+		pcap_open=pcap_open_dead(DLT_EN10MB,CAPLEN);
+		pcapture=pcap_dump_open(pcap_open,filename);
+		if( !pcapture)
+		{
+			perror("Error in pcap_dump_open");
+			exit(-1);
+		}
+		
+		i=0;
+		while( i<PKT_LIMIT )
+		{
+			/* Lectura de info asociada a cada paquete */
+			if( fread(&secs,1,sizeof(u_int32_t),fraw)!=sizeof(u_int32_t) )
+			{
+				printf("Segundos\n");
+				break;
+			}
+			else if( secs==0 )
+			{
+				printf("Padding 1\n");
+				break;
+			}
+			if( fread(&nsecs,1,sizeof(u_int32_t),fraw)!=sizeof(u_int32_t) )
+			{
+				printf("Microsegundos\n");
+				break;
+			}
+			if( fread(&len,1,sizeof(u_int32_t),fraw)!=sizeof(u_int32_t) )
+			{
+				printf("Longitud\n");
+				break;
+			}
+			else if( len==0 )
+			{
+				printf("Padding 2\n");
+				break;
+			}
+
+			
+			/* Escritura de cabecera */
+			h.ts.tv_sec=secs;
+			h.ts.tv_usec=nsecs/1000;
+			if( len < CAPLEN )
+				h.caplen=len;
+			else
+				h.caplen=CAPLEN;
+			h.len=len;
+			#ifdef DEBUG
+			printf("[%09ld.%09ld] %u bytes, %lu, %d,%d\n", secs, nsecs, len, filesize,j,i);
+			#endif
+	
+			if( len > MAX_PACKET_LEN )
+			{
+				#ifdef DEBUG
+				printf("Paquete anterior (%d bytes):\n",lastlen);
+				for(j=0;j<lastlen;j+=8)
+				{
+					printf( "\t%02x %02x %02x %02x\t%02x %02x %02x %02x\n", buf[j], buf[j+1], buf[j+2], buf[j+3], buf[j+4], buf[j+5], buf[j+6], buf[j+7]);
+				}
+				//ret = fread(buf,1,len,fraw);
+				//printf("Paquete (se han podido leer %d bytes):\n",ret);
+				/*for(j=0;j<ret;j+=8)
+				{
+					printf( "\t%02x %02x %02x %02x\t%02x %02x %02x %02x\n", buf[j], buf[j+1], buf[j+2], buf[j+3], buf[j+4], buf[j+5], buf[j+6], buf[j+7]);
+				}*/
+				#endif
+				goto out;
+			}
+			else
+			{
+				/* Lectura del paquete */
+				if( len > 0 )
+				{
+					memset(buf,0,MAX_PACKET_LEN);
+					ret = fread(buf,1,len,fraw);
+					if( ret != len )
+					{
+						printf("Lectura del paquete\n");
+						break;
+					}
+				}
+			}	
+			/* Escribir a fichero */
+			pcap_dump( (u_char*)pcapture, &h, buf);
+			i++;
+			lastlen=len;
+			filesize += sizeof(u_int32_t)*3+len;
+		}
+		j++;
+	
+		printf("%d paquetes leidos\n",i);
+	
+		pcap_dump_close(pcapture);
+
+
+		if(i<PKT_LIMIT)
+			break;
+
+	}
+
+out:
+	printf("%d ficheros generados\n",j);
+	fclose(fraw);
+
+	return 0;
+}

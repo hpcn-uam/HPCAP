@@ -1,0 +1,27 @@
+#!/bin/bash
+
+while [ 1 ]
+do
+	clear
+	pids=""
+	for i in $(pidof dd)
+	do
+		if [ -z $pids ]
+		then
+			pids="$i"
+		else
+			pids="${pids},$i"
+		fi
+	done
+	pids="${pids},$(pidof hpcapPoll0q0)"
+	pids="${pids},$(pidof hpcapPoll1q0)"
+	for i in $(ps aux | grep  "/bin/bash ./monitor.bash" | awk '{print $2}')
+	do
+			pids="${pids},$i"
+	done
+	ps p ${pids} -o pid,tid,class,rtprio,ni,pri,pcpu,stat,wchan:14,comm,psr
+
+	df -h
+	
+	sleep 1
+done

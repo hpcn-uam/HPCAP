@@ -1,0 +1,12 @@
+LIBS = -lps -lnuma -lpcap -lpthread
+LIB_DIR = -L../../lib 
+
+.PHONY: clean
+
+all: apcap_dump
+
+apcap_dump: apcap_dump.c
+	gcc -O2 -g -Wall -o apcap_dump apcap_dump.c $(LIB_DIR) $(LIBS)
+
+clean:
+	rm -f apcap_dump

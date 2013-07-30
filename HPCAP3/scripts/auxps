@@ -1,0 +1,795 @@
+  PID   TID CLS RTPRIO  NI PRI %CPU STAT WCHAN          COMMAND         PSR
+    1     1 TS       -   0  19  0.0 Ss   poll_schedule_ init              4
+    2     2 TS       -   0  19  0.0 S    kthreadd       kthreadd          6
+    3     3 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/0       0
+    6     6 FF      99   - 139  0.0 S    cpu_stopper_th migration/0       0
+    7     7 FF      99   - 139  0.0 S    watchdog       watchdog/0        0
+    8     8 FF      99   - 139  0.0 S    cpu_stopper_th migration/1       1
+    9     9 TS       -   0  19  0.0 S    worker_thread  kworker/1:0       1
+   10    10 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/1       1
+   11    11 TS       -   0  19  0.0 S    worker_thread  kworker/0:1       0
+   12    12 FF      99   - 139  0.0 S    watchdog       watchdog/1        1
+   13    13 FF      99   - 139  0.0 S    cpu_stopper_th migration/2       2
+   14    14 TS       -   0  19  0.0 S    worker_thread  kworker/2:0       2
+   15    15 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/2       2
+   16    16 FF      99   - 139  0.0 S    watchdog       watchdog/2        2
+   17    17 FF      99   - 139  0.0 S    cpu_stopper_th migration/3       3
+   18    18 TS       -   0  19  0.0 S    worker_thread  kworker/3:0       3
+   19    19 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/3       3
+   20    20 FF      99   - 139  0.0 S    watchdog       watchdog/3        3
+   21    21 FF      99   - 139  0.0 S    cpu_stopper_th migration/4       4
+   23    23 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/4       4
+   24    24 FF      99   - 139  0.0 S    watchdog       watchdog/4        4
+   25    25 FF      99   - 139  0.0 S    cpu_stopper_th migration/5       5
+   26    26 TS       -   0  19  0.0 S    worker_thread  kworker/5:0       5
+   27    27 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/5       5
+   28    28 FF      99   - 139  0.0 S    watchdog       watchdog/5        5
+   29    29 FF      99   - 139  0.0 S    cpu_stopper_th migration/6       6
+   31    31 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/6       6
+   32    32 FF      99   - 139  0.0 S    watchdog       watchdog/6        6
+   33    33 FF      99   - 139  0.0 S    cpu_stopper_th migration/7       7
+   34    34 TS       -   0  19  0.0 S    worker_thread  kworker/7:0       7
+   35    35 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/7       7
+   36    36 FF      99   - 139  0.0 S    watchdog       watchdog/7        7
+   37    37 FF      99   - 139  0.0 S    cpu_stopper_th migration/8       8
+   39    39 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/8       8
+   40    40 FF      99   - 139  0.0 S    watchdog       watchdog/8        8
+   41    41 FF      99   - 139  0.0 S    cpu_stopper_th migration/9       9
+   43    43 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/9       9
+   44    44 FF      99   - 139  0.0 S    watchdog       watchdog/9        9
+   45    45 FF      99   - 139  0.0 S    cpu_stopper_th migration/10     10
+   47    47 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/10     10
+   48    48 FF      99   - 139  0.0 S    watchdog       watchdog/10      10
+   49    49 FF      99   - 139  0.0 S    cpu_stopper_th migration/11     11
+   51    51 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/11     11
+   52    52 FF      99   - 139  0.0 S    watchdog       watchdog/11      11
+   53    53 TS       - -20  39  0.0 S<   rescuer_thread cpuset            7
+   54    54 TS       - -20  39  0.0 S<   rescuer_thread khelper           2
+   55    55 TS       -   0  19  0.0 S    devtmpfsd      kdevtmpfs         5
+   56    56 TS       - -20  39  0.0 S<   rescuer_thread netns             7
+   58    58 TS       -   0  19  0.0 S    bdi_sync_super sync_supers       1
+   59    59 TS       -   0  19  0.0 S    bdi_forker_thr bdi-default       1
+   60    60 TS       - -20  39  0.0 S<   rescuer_thread kintegrityd       7
+   61    61 TS       - -20  39  0.0 S<   rescuer_thread kblockd           7
+   62    62 TS       - -20  39  0.0 S<   rescuer_thread ata_sff           7
+   63    63 TS       -   0  19  0.0 S    hub_thread     khubd             0
+   64    64 TS       - -20  39  0.0 S<   rescuer_thread md                7
+   65    65 TS       -   0  19  0.0 S    worker_thread  kworker/4:1       4
+   67    67 TS       -   0  19  0.0 S    watchdog       khungtaskd        9
+   68    68 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd0           0
+   69    69 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd1           7
+   70    70 TS       -   5  14  0.0 SN   ksm_scan_threa ksmd              7
+   71    71 TS       -  19   0  0.0 SN   khugepaged_loo khugepaged        8
+   72    72 TS       -   0  19  0.0 S    fsnotify_mark_ fsnotify_mark     7
+   73    73 TS       -   0  19  0.0 S    ecryptfs_threa ecryptfs-kthrea   7
+   74    74 TS       - -20  39  0.0 S<   rescuer_thread crypto            7
+   82    82 TS       - -20  39  0.0 S<   rescuer_thread kthrotld          7
+   83    83 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_0         9
+   84    84 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_1         6
+   85    85 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_2         8
+   86    86 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_3        10
+   87    87 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_4        11
+   88    88 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_5         0
+   91    91 TS       -   0  19  0.0 S    worker_thread  kworker/u:4       3
+   92    92 TS       -   0  19  0.0 S    worker_thread  kworker/u:5       4
+   94    94 TS       -   0  19  0.0 S    worker_thread  kworker/8:1       8
+   95    95 TS       -   0  19  0.0 S    worker_thread  kworker/10:1     10
+   96    96 TS       -   0  19  0.0 S    worker_thread  kworker/9:1       9
+   97    97 TS       -   0  19  0.0 S    worker_thread  kworker/11:1     11
+   98    98 TS       -   0  19  0.0 S    worker_thread  kworker/7:1       7
+  100   100 TS       -   0  19  0.0 S    worker_thread  kworker/2:1       2
+  106   106 TS       -   0  19  0.0 S    worker_thread  kworker/1:1       1
+  121   121 TS       - -20  39  0.0 S<   rescuer_thread devfreq_wq        7
+  122   122 TS       -   0  19  0.0 S    worker_thread  kworker/3:1       3
+  193   193 TS       -   0  19  0.0 S    worker_thread  kworker/5:1       5
+  359   359 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_6         6
+  362   362 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_7         9
+  369   369 TS       - -20  39  0.0 S<   rescuer_thread scsi_wq_6         5
+  404   404 TS       -   0  19  0.0 S    kjournald2     jbd2/sda1-8       6
+  405   405 TS       - -20  39  0.0 S<   rescuer_thread ext4-dio-unwrit   7
+  501   501 TS       -   0  19  0.0 S    poll_schedule_ upstart-udev-br   2
+  504   504 TS       -   0  19  0.0 Ss   ep_poll        udevd             5
+  615   615 FF      50   -  90  0.0 S    irq_thread     irq/175-mei      11
+  651   651 TS       - -20  39  0.0 S<   rescuer_thread edac-poller       9
+  821   821 TS       -   0  19  0.0 S    worker_thread  kworker/6:2       6
+  870   870 TS       -   0  19  0.0 Ss   poll_schedule_ rpcbind           6
+  896   896 TS       -   0  19  0.0 S    poll_schedule_ upstart-socket-   6
+  928   928 TS       - -20  39  0.0 S<   rescuer_thread rpciod            7
+  942   942 TS       - -20  39  0.0 S<   rescuer_thread nfsiod            5
+  959   959 TS       -   0  19  0.0 Ss   poll_schedule_ dbus-daemon       7
+  963   963 TS       -   0  19  0.0 Ss   ep_poll        rpc.idmapd        9
+  970   970 TS       -   0  19  0.0 Sl   poll_schedule_ rsyslogd          3
+  980   980 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.statd         7
+ 1022  1022 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              5
+ 1128  1128 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1139  1139 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1154  1154 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1156  1156 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1160  1160 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1169  1169 TS       -   0  19  0.0 Ss   poll_schedule_ acpid             7
+ 1173  1173 TS       -   0  19  0.0 Ss   hrtimer_nanosl cron              5
+ 1174  1174 TS       -   0  19  0.0 Ss   hrtimer_nanosl atd               1
+ 1194  1194 TS       -   0  19  0.0 Ssl  poll_schedule_ whoopsie          6
+ 1265  1265 TS       -   0  19  0.0 S    svc_recv       lockd             8
+ 1266  1266 TS       - -20  39  0.0 S<   rescuer_thread nfsd4             7
+ 1267  1267 TS       - -20  39  0.0 S<   rescuer_thread nfsd4_callbacks   7
+ 1268  1268 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1269  1269 TS       -   0  19  0.0 S    svc_recv       nfsd              9
+ 1270  1270 TS       -   0  19  0.0 S    svc_recv       nfsd              1
+ 1271  1271 TS       -   0  19  0.0 S    svc_recv       nfsd              5
+ 1272  1272 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1274  1274 TS       -   0  19  0.0 S    svc_recv       nfsd             10
+ 1275  1275 TS       -   0  19  0.0 S    svc_recv       nfsd              8
+ 1276  1276 TS       -   0  19  0.0 S    svc_recv       nfsd              7
+ 1298  1298 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.mountd        9
+ 1375  1375 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1384  1384 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              0
+ 1387  1387 TS       -   0  19  0.0 Sl   poll_schedule_ console-kit-dae   6
+ 1454  1454 TS       -   0  19  0.0 Sl   poll_schedule_ polkitd          10
+ 1598  1598 TS       -   0  19  0.0 S    poll_schedule_ sshd              1
+ 1599  1599 TS       -   0  19  0.0 Ss   wait           bash              8
+ 2342  2342 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              8
+ 2551  2551 TS       -   0  19  0.0 S    poll_schedule_ sshd             11
+ 2552  2552 TS       -   0  19  0.0 Ss   wait           bash              8
+11815 11815 TS       -   0  19  0.0 S    worker_thread  kworker/0:2       0
+11820 11820 TS       -   0  19  0.0 S    worker_thread  kworker/8:2       8
+11839 11839 TS       -   0  19  0.0 S    worker_thread  kworker/10:2     10
+12282 12282 TS       -   0  19  0.0 S    worker_thread  kworker/9:2       9
+15673 15673 TS       - -20  39  0.0 S<   rescuer_thread xfs_mru_cache     6
+15674 15674 TS       - -20  39  0.0 S<   rescuer_thread xfslogd           6
+15676 15676 TS       - -20  39  0.0 S<   rescuer_thread xfsdatad          6
+15677 15677 TS       - -20  39  0.0 S<   rescuer_thread xfsconvertd       6
+15678 15678 TS       -   0  19  0.0 S    xfsbufd        xfsbufd/sdb       3
+15679 15679 TS       -   0  19  0.0 S    xfsaild        xfsaild/sdb       5
+17399 17399 TS       -   0  19  0.0 S    worker_thread  kworker/6:1       6
+17408 17408 TS       -   0  19  0.0 S    bdi_writeback_ flush-8:0        11
+29032 29032 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             6
+29072 29072 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             7
+29111 29111 TS       -   0  19  0.0 S+   poll_schedule_ sudo             10
+29112 29112 TS       -   0  19  0.0 S+   wait           monitorCPUs.bas   9
+29114 29114 TS       -   0  19  0.0 R+   -              ps               11
+30413 30413 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30418 30418 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30442 30442 TS       -   0  19  0.0 S    worker_thread  kworker/4:2       4
+30444 30444 TS       -   0  19 99.9 R    -              hpcapPoll0q0      0
+30446 30446 TS       -   0  19  0.0 S    worker_thread  kworker/11:2     11
+30467 30467 TS       -   0  19 99.9 R    -              hpcapPoll2q0      2
+30476 30476 TS       -   0  19  0.0 S    wait           monitor.bash      9
+30477 30477 TS       -   0  19  0.0 S    wait           monitor.bash     11
+31532 31532 TS       -   0  19  0.0 S+   inotify_read   tail              7
+  PID   TID CLS RTPRIO  NI PRI %CPU STAT WCHAN          COMMAND         PSR
+    1     1 TS       -   0  19  0.0 Ss   poll_schedule_ init              4
+    2     2 TS       -   0  19  0.0 S    kthreadd       kthreadd          6
+    3     3 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/0       0
+    6     6 FF      99   - 139  0.0 S    cpu_stopper_th migration/0       0
+    7     7 FF      99   - 139  0.0 S    watchdog       watchdog/0        0
+    8     8 FF      99   - 139  0.0 S    cpu_stopper_th migration/1       1
+    9     9 TS       -   0  19  0.0 S    worker_thread  kworker/1:0       1
+   10    10 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/1       1
+   11    11 TS       -   0  19  0.0 S    worker_thread  kworker/0:1       0
+   12    12 FF      99   - 139  0.0 S    watchdog       watchdog/1        1
+   13    13 FF      99   - 139  0.0 S    cpu_stopper_th migration/2       2
+   14    14 TS       -   0  19  0.0 S    worker_thread  kworker/2:0       2
+   15    15 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/2       2
+   16    16 FF      99   - 139  0.0 S    watchdog       watchdog/2        2
+   17    17 FF      99   - 139  0.0 S    cpu_stopper_th migration/3       3
+   18    18 TS       -   0  19  0.0 S    worker_thread  kworker/3:0       3
+   19    19 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/3       3
+   20    20 FF      99   - 139  0.0 S    watchdog       watchdog/3        3
+   21    21 FF      99   - 139  0.0 S    cpu_stopper_th migration/4       4
+   23    23 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/4       4
+   24    24 FF      99   - 139  0.0 S    watchdog       watchdog/4        4
+   25    25 FF      99   - 139  0.0 S    cpu_stopper_th migration/5       5
+   26    26 TS       -   0  19  0.0 S    worker_thread  kworker/5:0       5
+   27    27 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/5       5
+   28    28 FF      99   - 139  0.0 S    watchdog       watchdog/5        5
+   29    29 FF      99   - 139  0.0 S    cpu_stopper_th migration/6       6
+   31    31 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/6       6
+   32    32 FF      99   - 139  0.0 S    watchdog       watchdog/6        6
+   33    33 FF      99   - 139  0.0 S    cpu_stopper_th migration/7       7
+   34    34 TS       -   0  19  0.0 S    worker_thread  kworker/7:0       7
+   35    35 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/7       7
+   36    36 FF      99   - 139  0.0 S    watchdog       watchdog/7        7
+   37    37 FF      99   - 139  0.0 S    cpu_stopper_th migration/8       8
+   39    39 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/8       8
+   40    40 FF      99   - 139  0.0 S    watchdog       watchdog/8        8
+   41    41 FF      99   - 139  0.0 S    cpu_stopper_th migration/9       9
+   43    43 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/9       9
+   44    44 FF      99   - 139  0.0 S    watchdog       watchdog/9        9
+   45    45 FF      99   - 139  0.0 S    cpu_stopper_th migration/10     10
+   47    47 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/10     10
+   48    48 FF      99   - 139  0.0 S    watchdog       watchdog/10      10
+   49    49 FF      99   - 139  0.0 S    cpu_stopper_th migration/11     11
+   51    51 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/11     11
+   52    52 FF      99   - 139  0.0 S    watchdog       watchdog/11      11
+   53    53 TS       - -20  39  0.0 S<   rescuer_thread cpuset            7
+   54    54 TS       - -20  39  0.0 S<   rescuer_thread khelper           2
+   55    55 TS       -   0  19  0.0 S    devtmpfsd      kdevtmpfs         5
+   56    56 TS       - -20  39  0.0 S<   rescuer_thread netns             7
+   58    58 TS       -   0  19  0.0 S    bdi_sync_super sync_supers       1
+   59    59 TS       -   0  19  0.0 S    bdi_forker_thr bdi-default       1
+   60    60 TS       - -20  39  0.0 S<   rescuer_thread kintegrityd       7
+   61    61 TS       - -20  39  0.0 S<   rescuer_thread kblockd           7
+   62    62 TS       - -20  39  0.0 S<   rescuer_thread ata_sff           7
+   63    63 TS       -   0  19  0.0 S    hub_thread     khubd             0
+   64    64 TS       - -20  39  0.0 S<   rescuer_thread md                7
+   65    65 TS       -   0  19  0.0 S    worker_thread  kworker/4:1       4
+   67    67 TS       -   0  19  0.0 S    watchdog       khungtaskd        9
+   68    68 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd0           0
+   69    69 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd1           7
+   70    70 TS       -   5  14  0.0 SN   ksm_scan_threa ksmd              7
+   71    71 TS       -  19   0  0.0 SN   khugepaged_loo khugepaged        8
+   72    72 TS       -   0  19  0.0 S    fsnotify_mark_ fsnotify_mark     7
+   73    73 TS       -   0  19  0.0 S    ecryptfs_threa ecryptfs-kthrea   7
+   74    74 TS       - -20  39  0.0 S<   rescuer_thread crypto            7
+   82    82 TS       - -20  39  0.0 S<   rescuer_thread kthrotld          7
+   83    83 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_0         9
+   84    84 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_1         6
+   85    85 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_2         8
+   86    86 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_3        10
+   87    87 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_4        11
+   88    88 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_5         0
+   91    91 TS       -   0  19  0.0 S    worker_thread  kworker/u:4       3
+   92    92 TS       -   0  19  0.0 S    worker_thread  kworker/u:5       3
+   94    94 TS       -   0  19  0.0 S    worker_thread  kworker/8:1       8
+   95    95 TS       -   0  19  0.0 S    worker_thread  kworker/10:1     10
+   96    96 TS       -   0  19  0.0 S    worker_thread  kworker/9:1       9
+   97    97 TS       -   0  19  0.0 S    worker_thread  kworker/11:1     11
+   98    98 TS       -   0  19  0.0 S    worker_thread  kworker/7:1       7
+  100   100 TS       -   0  19  0.0 S    worker_thread  kworker/2:1       2
+  106   106 TS       -   0  19  0.0 S    worker_thread  kworker/1:1       1
+  121   121 TS       - -20  39  0.0 S<   rescuer_thread devfreq_wq        7
+  122   122 TS       -   0  19  0.0 S    worker_thread  kworker/3:1       3
+  193   193 TS       -   0  19  0.0 S    worker_thread  kworker/5:1       5
+  359   359 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_6         6
+  362   362 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_7         9
+  369   369 TS       - -20  39  0.0 S<   rescuer_thread scsi_wq_6         5
+  404   404 TS       -   0  19  0.0 S    kjournald2     jbd2/sda1-8       6
+  405   405 TS       - -20  39  0.0 S<   rescuer_thread ext4-dio-unwrit   7
+  501   501 TS       -   0  19  0.0 S    poll_schedule_ upstart-udev-br   2
+  504   504 TS       -   0  19  0.0 Ss   ep_poll        udevd             5
+  615   615 FF      50   -  90  0.0 S    irq_thread     irq/175-mei      11
+  651   651 TS       - -20  39  0.0 S<   rescuer_thread edac-poller       9
+  821   821 TS       -   0  19  0.0 S    worker_thread  kworker/6:2       6
+  870   870 TS       -   0  19  0.0 Ss   poll_schedule_ rpcbind           6
+  896   896 TS       -   0  19  0.0 S    poll_schedule_ upstart-socket-   6
+  928   928 TS       - -20  39  0.0 S<   rescuer_thread rpciod            7
+  942   942 TS       - -20  39  0.0 S<   rescuer_thread nfsiod            5
+  959   959 TS       -   0  19  0.0 Ss   poll_schedule_ dbus-daemon       7
+  963   963 TS       -   0  19  0.0 Ss   ep_poll        rpc.idmapd        9
+  970   970 TS       -   0  19  0.0 Sl   poll_schedule_ rsyslogd          3
+  980   980 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.statd         7
+ 1022  1022 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              5
+ 1128  1128 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1139  1139 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1154  1154 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1156  1156 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1160  1160 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1169  1169 TS       -   0  19  0.0 Ss   poll_schedule_ acpid             7
+ 1173  1173 TS       -   0  19  0.0 Ss   hrtimer_nanosl cron              5
+ 1174  1174 TS       -   0  19  0.0 Ss   hrtimer_nanosl atd               1
+ 1194  1194 TS       -   0  19  0.0 Ssl  poll_schedule_ whoopsie          6
+ 1265  1265 TS       -   0  19  0.0 S    svc_recv       lockd             8
+ 1266  1266 TS       - -20  39  0.0 S<   rescuer_thread nfsd4             7
+ 1267  1267 TS       - -20  39  0.0 S<   rescuer_thread nfsd4_callbacks   7
+ 1268  1268 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1269  1269 TS       -   0  19  0.0 S    svc_recv       nfsd              9
+ 1270  1270 TS       -   0  19  0.0 S    svc_recv       nfsd              1
+ 1271  1271 TS       -   0  19  0.0 S    svc_recv       nfsd              5
+ 1272  1272 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1274  1274 TS       -   0  19  0.0 S    svc_recv       nfsd             10
+ 1275  1275 TS       -   0  19  0.0 S    svc_recv       nfsd              8
+ 1276  1276 TS       -   0  19  0.0 S    svc_recv       nfsd              7
+ 1298  1298 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.mountd        9
+ 1375  1375 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1384  1384 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              0
+ 1387  1387 TS       -   0  19  0.0 Sl   poll_schedule_ console-kit-dae   6
+ 1454  1454 TS       -   0  19  0.0 Sl   poll_schedule_ polkitd          10
+ 1598  1598 TS       -   0  19  0.0 S    poll_schedule_ sshd              1
+ 1599  1599 TS       -   0  19  0.0 Ss   wait           bash              6
+ 2342  2342 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              8
+ 2551  2551 TS       -   0  19  0.0 S    poll_schedule_ sshd             11
+ 2552  2552 TS       -   0  19  0.0 Ss   wait           bash              8
+11815 11815 TS       -   0  19  0.0 S    worker_thread  kworker/0:2       0
+11820 11820 TS       -   0  19  0.0 S    worker_thread  kworker/8:2       8
+11839 11839 TS       -   0  19  0.0 S    worker_thread  kworker/10:2     10
+12282 12282 TS       -   0  19  0.0 S    worker_thread  kworker/9:2       9
+15673 15673 TS       - -20  39  0.0 S<   rescuer_thread xfs_mru_cache     6
+15674 15674 TS       - -20  39  0.0 S<   rescuer_thread xfslogd           6
+15676 15676 TS       - -20  39  0.0 S<   rescuer_thread xfsdatad          6
+15677 15677 TS       - -20  39  0.0 S<   rescuer_thread xfsconvertd       6
+15678 15678 TS       -   0  19  0.0 S    xfsbufd        xfsbufd/sdb       3
+15679 15679 TS       -   0  19  0.0 S    xfsaild        xfsaild/sdb       5
+17399 17399 TS       -   0  19  0.0 S    worker_thread  kworker/6:1       6
+17408 17408 TS       -   0  19  0.0 S    bdi_writeback_ flush-8:0         6
+29203 29203 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             8
+29243 29243 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             9
+29282 29282 TS       -   0  19  0.0 S+   poll_schedule_ sudo              8
+29283 29283 TS       -   0  19  0.0 S+   wait           monitorCPUs.bas   8
+29285 29285 TS       -   0  19  0.0 R+   -              ps               10
+30413 30413 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30418 30418 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30442 30442 TS       -   0  19  0.0 S    worker_thread  kworker/4:2       4
+30444 30444 TS       -   0  19 99.9 R    -              hpcapPoll0q0      0
+30446 30446 TS       -   0  19  0.0 S    worker_thread  kworker/11:2     11
+30467 30467 TS       -   0  19 99.9 R    -              hpcapPoll2q0      2
+30476 30476 TS       -   0  19  0.0 S    wait           monitor.bash      6
+30477 30477 TS       -   0  19  0.0 S    wait           monitor.bash     10
+31532 31532 TS       -   0  19  0.0 S+   inotify_read   tail              7
+  PID   TID CLS RTPRIO  NI PRI %CPU STAT WCHAN          COMMAND         PSR
+    1     1 TS       -   0  19  0.0 Ss   poll_schedule_ init              4
+    2     2 TS       -   0  19  0.0 S    kthreadd       kthreadd          6
+    3     3 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/0       0
+    6     6 FF      99   - 139  0.0 S    cpu_stopper_th migration/0       0
+    7     7 FF      99   - 139  0.0 S    watchdog       watchdog/0        0
+    8     8 FF      99   - 139  0.0 S    cpu_stopper_th migration/1       1
+    9     9 TS       -   0  19  0.0 S    worker_thread  kworker/1:0       1
+   10    10 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/1       1
+   11    11 TS       -   0  19  0.0 S    worker_thread  kworker/0:1       0
+   12    12 FF      99   - 139  0.0 S    watchdog       watchdog/1        1
+   13    13 FF      99   - 139  0.0 S    cpu_stopper_th migration/2       2
+   14    14 TS       -   0  19  0.0 S    worker_thread  kworker/2:0       2
+   15    15 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/2       2
+   16    16 FF      99   - 139  0.0 S    watchdog       watchdog/2        2
+   17    17 FF      99   - 139  0.0 S    cpu_stopper_th migration/3       3
+   18    18 TS       -   0  19  0.0 S    worker_thread  kworker/3:0       3
+   19    19 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/3       3
+   20    20 FF      99   - 139  0.0 S    watchdog       watchdog/3        3
+   21    21 FF      99   - 139  0.0 S    cpu_stopper_th migration/4       4
+   23    23 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/4       4
+   24    24 FF      99   - 139  0.0 S    watchdog       watchdog/4        4
+   25    25 FF      99   - 139  0.0 S    cpu_stopper_th migration/5       5
+   26    26 TS       -   0  19  0.0 S    worker_thread  kworker/5:0       5
+   27    27 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/5       5
+   28    28 FF      99   - 139  0.0 S    watchdog       watchdog/5        5
+   29    29 FF      99   - 139  0.0 S    cpu_stopper_th migration/6       6
+   31    31 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/6       6
+   32    32 FF      99   - 139  0.0 S    watchdog       watchdog/6        6
+   33    33 FF      99   - 139  0.0 S    cpu_stopper_th migration/7       7
+   34    34 TS       -   0  19  0.0 S    worker_thread  kworker/7:0       7
+   35    35 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/7       7
+   36    36 FF      99   - 139  0.0 S    watchdog       watchdog/7        7
+   37    37 FF      99   - 139  0.0 S    cpu_stopper_th migration/8       8
+   39    39 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/8       8
+   40    40 FF      99   - 139  0.0 S    watchdog       watchdog/8        8
+   41    41 FF      99   - 139  0.0 S    cpu_stopper_th migration/9       9
+   43    43 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/9       9
+   44    44 FF      99   - 139  0.0 S    watchdog       watchdog/9        9
+   45    45 FF      99   - 139  0.0 S    cpu_stopper_th migration/10     10
+   47    47 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/10     10
+   48    48 FF      99   - 139  0.0 S    watchdog       watchdog/10      10
+   49    49 FF      99   - 139  0.0 S    cpu_stopper_th migration/11     11
+   51    51 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/11     11
+   52    52 FF      99   - 139  0.0 S    watchdog       watchdog/11      11
+   53    53 TS       - -20  39  0.0 S<   rescuer_thread cpuset            7
+   54    54 TS       - -20  39  0.0 S<   rescuer_thread khelper           2
+   55    55 TS       -   0  19  0.0 S    devtmpfsd      kdevtmpfs         5
+   56    56 TS       - -20  39  0.0 S<   rescuer_thread netns             7
+   58    58 TS       -   0  19  0.0 S    bdi_sync_super sync_supers       1
+   59    59 TS       -   0  19  0.0 S    bdi_forker_thr bdi-default       1
+   60    60 TS       - -20  39  0.0 S<   rescuer_thread kintegrityd       7
+   61    61 TS       - -20  39  0.0 S<   rescuer_thread kblockd           7
+   62    62 TS       - -20  39  0.0 S<   rescuer_thread ata_sff           7
+   63    63 TS       -   0  19  0.0 S    hub_thread     khubd             0
+   64    64 TS       - -20  39  0.0 S<   rescuer_thread md                7
+   65    65 TS       -   0  19  0.0 S    worker_thread  kworker/4:1       4
+   67    67 TS       -   0  19  0.0 S    watchdog       khungtaskd        9
+   68    68 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd0           0
+   69    69 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd1           7
+   70    70 TS       -   5  14  0.0 SN   ksm_scan_threa ksmd              7
+   71    71 TS       -  19   0  0.0 SN   khugepaged_loo khugepaged        8
+   72    72 TS       -   0  19  0.0 S    fsnotify_mark_ fsnotify_mark     7
+   73    73 TS       -   0  19  0.0 S    ecryptfs_threa ecryptfs-kthrea   7
+   74    74 TS       - -20  39  0.0 S<   rescuer_thread crypto            7
+   82    82 TS       - -20  39  0.0 S<   rescuer_thread kthrotld          7
+   83    83 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_0         9
+   84    84 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_1         6
+   85    85 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_2         8
+   86    86 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_3        10
+   87    87 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_4        11
+   88    88 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_5         0
+   91    91 TS       -   0  19  0.0 S    worker_thread  kworker/u:4       3
+   92    92 TS       -   0  19  0.0 S    worker_thread  kworker/u:5       4
+   94    94 TS       -   0  19  0.0 S    worker_thread  kworker/8:1       8
+   95    95 TS       -   0  19  0.0 S    worker_thread  kworker/10:1     10
+   96    96 TS       -   0  19  0.0 S    worker_thread  kworker/9:1       9
+   97    97 TS       -   0  19  0.0 S    worker_thread  kworker/11:1     11
+   98    98 TS       -   0  19  0.0 S    worker_thread  kworker/7:1       7
+  100   100 TS       -   0  19  0.0 S    worker_thread  kworker/2:1       2
+  106   106 TS       -   0  19  0.0 S    worker_thread  kworker/1:1       1
+  121   121 TS       - -20  39  0.0 S<   rescuer_thread devfreq_wq        7
+  122   122 TS       -   0  19  0.0 S    worker_thread  kworker/3:1       3
+  193   193 TS       -   0  19  0.0 S    worker_thread  kworker/5:1       5
+  359   359 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_6         6
+  362   362 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_7         9
+  369   369 TS       - -20  39  0.0 S<   rescuer_thread scsi_wq_6         5
+  404   404 TS       -   0  19  0.0 S    kjournald2     jbd2/sda1-8       6
+  405   405 TS       - -20  39  0.0 S<   rescuer_thread ext4-dio-unwrit   7
+  501   501 TS       -   0  19  0.0 S    poll_schedule_ upstart-udev-br   2
+  504   504 TS       -   0  19  0.0 Ss   ep_poll        udevd             5
+  615   615 FF      50   -  90  0.0 S    irq_thread     irq/175-mei      11
+  651   651 TS       - -20  39  0.0 S<   rescuer_thread edac-poller       9
+  821   821 TS       -   0  19  0.0 S    worker_thread  kworker/6:2       6
+  870   870 TS       -   0  19  0.0 Ss   poll_schedule_ rpcbind           6
+  896   896 TS       -   0  19  0.0 S    poll_schedule_ upstart-socket-   6
+  928   928 TS       - -20  39  0.0 S<   rescuer_thread rpciod            7
+  942   942 TS       - -20  39  0.0 S<   rescuer_thread nfsiod            5
+  959   959 TS       -   0  19  0.0 Ss   poll_schedule_ dbus-daemon       7
+  963   963 TS       -   0  19  0.0 Ss   ep_poll        rpc.idmapd        9
+  970   970 TS       -   0  19  0.0 Sl   poll_schedule_ rsyslogd          3
+  980   980 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.statd         7
+ 1022  1022 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              5
+ 1128  1128 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1139  1139 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1154  1154 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1156  1156 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1160  1160 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1169  1169 TS       -   0  19  0.0 Ss   poll_schedule_ acpid             7
+ 1173  1173 TS       -   0  19  0.0 Ss   hrtimer_nanosl cron              5
+ 1174  1174 TS       -   0  19  0.0 Ss   hrtimer_nanosl atd               1
+ 1194  1194 TS       -   0  19  0.0 Ssl  poll_schedule_ whoopsie          6
+ 1265  1265 TS       -   0  19  0.0 S    svc_recv       lockd             8
+ 1266  1266 TS       - -20  39  0.0 S<   rescuer_thread nfsd4             7
+ 1267  1267 TS       - -20  39  0.0 S<   rescuer_thread nfsd4_callbacks   7
+ 1268  1268 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1269  1269 TS       -   0  19  0.0 S    svc_recv       nfsd              9
+ 1270  1270 TS       -   0  19  0.0 S    svc_recv       nfsd              1
+ 1271  1271 TS       -   0  19  0.0 S    svc_recv       nfsd              5
+ 1272  1272 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1274  1274 TS       -   0  19  0.0 S    svc_recv       nfsd             10
+ 1275  1275 TS       -   0  19  0.0 S    svc_recv       nfsd              8
+ 1276  1276 TS       -   0  19  0.0 S    svc_recv       nfsd              7
+ 1298  1298 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.mountd        9
+ 1375  1375 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1384  1384 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              0
+ 1387  1387 TS       -   0  19  0.0 Sl   poll_schedule_ console-kit-dae   6
+ 1454  1454 TS       -   0  19  0.0 Sl   poll_schedule_ polkitd          10
+ 1598  1598 TS       -   0  19  0.0 S    poll_schedule_ sshd              1
+ 1599  1599 TS       -   0  19  0.0 Ss   wait           bash              9
+ 2342  2342 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              8
+ 2551  2551 TS       -   0  19  0.0 S    poll_schedule_ sshd             11
+ 2552  2552 TS       -   0  19  0.0 Ss   wait           bash              8
+11815 11815 TS       -   0  19  0.0 S    worker_thread  kworker/0:2       0
+11820 11820 TS       -   0  19  0.0 S    worker_thread  kworker/8:2       8
+11839 11839 TS       -   0  19  0.0 S    worker_thread  kworker/10:2     10
+12282 12282 TS       -   0  19  0.0 S    worker_thread  kworker/9:2       9
+15673 15673 TS       - -20  39  0.0 S<   rescuer_thread xfs_mru_cache     6
+15674 15674 TS       - -20  39  0.0 S<   rescuer_thread xfslogd           6
+15676 15676 TS       - -20  39  0.0 S<   rescuer_thread xfsdatad          6
+15677 15677 TS       - -20  39  0.0 S<   rescuer_thread xfsconvertd       6
+15678 15678 TS       -   0  19  0.0 S    xfsbufd        xfsbufd/sdb       3
+15679 15679 TS       -   0  19  0.0 S    xfsaild        xfsaild/sdb       3
+17399 17399 TS       -   0  19  0.0 S    worker_thread  kworker/6:1       6
+17408 17408 TS       -   0  19  0.0 S    bdi_writeback_ flush-8:0         6
+29203 29203 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             8
+29243 29243 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             9
+29293 29293 TS       -   0  19  0.0 S+   poll_schedule_ sudo             11
+29294 29294 TS       -   0  19  0.0 S+   wait           monitorCPUs.bas  10
+29296 29296 TS       -   0  19  0.0 R+   -              ps                6
+30413 30413 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30418 30418 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30442 30442 TS       -   0  19  0.0 S    worker_thread  kworker/4:2       4
+30444 30444 TS       -   0  19 99.9 R    -              hpcapPoll0q0      0
+30446 30446 TS       -   0  19  0.0 S    worker_thread  kworker/11:2     11
+30467 30467 TS       -   0  19 99.9 R    -              hpcapPoll2q0      2
+30476 30476 TS       -   0  19  0.0 S    wait           monitor.bash      6
+30477 30477 TS       -   0  19  0.0 S    wait           monitor.bash     10
+31532 31532 TS       -   0  19  0.0 S+   inotify_read   tail              7
+  PID   TID CLS RTPRIO  NI PRI %CPU STAT WCHAN          COMMAND         PSR
+    1     1 TS       -   0  19  0.0 Ss   poll_schedule_ init              4
+    2     2 TS       -   0  19  0.0 S    kthreadd       kthreadd          6
+    3     3 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/0       0
+    6     6 FF      99   - 139  0.0 S    cpu_stopper_th migration/0       0
+    7     7 FF      99   - 139  0.0 S    watchdog       watchdog/0        0
+    8     8 FF      99   - 139  0.0 S    cpu_stopper_th migration/1       1
+    9     9 TS       -   0  19  0.0 S    worker_thread  kworker/1:0       1
+   10    10 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/1       1
+   11    11 TS       -   0  19  0.0 S    worker_thread  kworker/0:1       0
+   12    12 FF      99   - 139  0.0 S    watchdog       watchdog/1        1
+   13    13 FF      99   - 139  0.0 S    cpu_stopper_th migration/2       2
+   14    14 TS       -   0  19  0.0 S    worker_thread  kworker/2:0       2
+   15    15 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/2       2
+   16    16 FF      99   - 139  0.0 S    watchdog       watchdog/2        2
+   17    17 FF      99   - 139  0.0 S    cpu_stopper_th migration/3       3
+   18    18 TS       -   0  19  0.0 S    worker_thread  kworker/3:0       3
+   19    19 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/3       3
+   20    20 FF      99   - 139  0.0 S    watchdog       watchdog/3        3
+   21    21 FF      99   - 139  0.0 S    cpu_stopper_th migration/4       4
+   23    23 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/4       4
+   24    24 FF      99   - 139  0.0 S    watchdog       watchdog/4        4
+   25    25 FF      99   - 139  0.0 S    cpu_stopper_th migration/5       5
+   26    26 TS       -   0  19  0.0 S    worker_thread  kworker/5:0       5
+   27    27 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/5       5
+   28    28 FF      99   - 139  0.0 S    watchdog       watchdog/5        5
+   29    29 FF      99   - 139  0.0 S    cpu_stopper_th migration/6       6
+   31    31 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/6       6
+   32    32 FF      99   - 139  0.0 S    watchdog       watchdog/6        6
+   33    33 FF      99   - 139  0.0 S    cpu_stopper_th migration/7       7
+   34    34 TS       -   0  19  0.0 S    worker_thread  kworker/7:0       7
+   35    35 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/7       7
+   36    36 FF      99   - 139  0.0 S    watchdog       watchdog/7        7
+   37    37 FF      99   - 139  0.0 S    cpu_stopper_th migration/8       8
+   39    39 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/8       8
+   40    40 FF      99   - 139  0.0 S    watchdog       watchdog/8        8
+   41    41 FF      99   - 139  0.0 S    cpu_stopper_th migration/9       9
+   43    43 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/9       9
+   44    44 FF      99   - 139  0.0 S    watchdog       watchdog/9        9
+   45    45 FF      99   - 139  0.0 S    cpu_stopper_th migration/10     10
+   47    47 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/10     10
+   48    48 FF      99   - 139  0.0 S    watchdog       watchdog/10      10
+   49    49 FF      99   - 139  0.0 S    cpu_stopper_th migration/11     11
+   51    51 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/11     11
+   52    52 FF      99   - 139  0.0 S    watchdog       watchdog/11      11
+   53    53 TS       - -20  39  0.0 S<   rescuer_thread cpuset            7
+   54    54 TS       - -20  39  0.0 S<   rescuer_thread khelper           2
+   55    55 TS       -   0  19  0.0 S    devtmpfsd      kdevtmpfs         5
+   56    56 TS       - -20  39  0.0 S<   rescuer_thread netns             7
+   58    58 TS       -   0  19  0.0 S    bdi_sync_super sync_supers       1
+   59    59 TS       -   0  19  0.0 S    bdi_forker_thr bdi-default       1
+   60    60 TS       - -20  39  0.0 S<   rescuer_thread kintegrityd       7
+   61    61 TS       - -20  39  0.0 S<   rescuer_thread kblockd           7
+   62    62 TS       - -20  39  0.0 S<   rescuer_thread ata_sff           7
+   63    63 TS       -   0  19  0.0 S    hub_thread     khubd             0
+   64    64 TS       - -20  39  0.0 S<   rescuer_thread md                7
+   65    65 TS       -   0  19  0.0 S    worker_thread  kworker/4:1       4
+   67    67 TS       -   0  19  0.0 S    watchdog       khungtaskd        9
+   68    68 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd0           0
+   69    69 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd1           7
+   70    70 TS       -   5  14  0.0 SN   ksm_scan_threa ksmd              7
+   71    71 TS       -  19   0  0.0 SN   khugepaged_loo khugepaged        8
+   72    72 TS       -   0  19  0.0 S    fsnotify_mark_ fsnotify_mark     7
+   73    73 TS       -   0  19  0.0 S    ecryptfs_threa ecryptfs-kthrea   7
+   74    74 TS       - -20  39  0.0 S<   rescuer_thread crypto            7
+   82    82 TS       - -20  39  0.0 S<   rescuer_thread kthrotld          7
+   83    83 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_0         9
+   84    84 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_1         6
+   85    85 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_2         8
+   86    86 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_3        10
+   87    87 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_4        11
+   88    88 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_5         0
+   91    91 TS       -   0  19  0.0 S    worker_thread  kworker/u:4       3
+   92    92 TS       -   0  19  0.0 S    worker_thread  kworker/u:5       4
+   94    94 TS       -   0  19  0.0 S    worker_thread  kworker/8:1       8
+   95    95 TS       -   0  19  0.0 S    worker_thread  kworker/10:1     10
+   96    96 TS       -   0  19  0.0 S    worker_thread  kworker/9:1       9
+   97    97 TS       -   0  19  0.0 S    worker_thread  kworker/11:1     11
+   98    98 TS       -   0  19  0.0 S    worker_thread  kworker/7:1       7
+  100   100 TS       -   0  19  0.0 S    worker_thread  kworker/2:1       2
+  106   106 TS       -   0  19  0.0 S    worker_thread  kworker/1:1       1
+  121   121 TS       - -20  39  0.0 S<   rescuer_thread devfreq_wq        7
+  122   122 TS       -   0  19  0.0 S    worker_thread  kworker/3:1       3
+  193   193 TS       -   0  19  0.0 S    worker_thread  kworker/5:1       5
+  359   359 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_6         6
+  362   362 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_7         9
+  369   369 TS       - -20  39  0.0 S<   rescuer_thread scsi_wq_6         5
+  404   404 TS       -   0  19  0.0 S    kjournald2     jbd2/sda1-8       6
+  405   405 TS       - -20  39  0.0 S<   rescuer_thread ext4-dio-unwrit   7
+  501   501 TS       -   0  19  0.0 S    poll_schedule_ upstart-udev-br   2
+  504   504 TS       -   0  19  0.0 Ss   ep_poll        udevd             5
+  615   615 FF      50   -  90  0.0 S    irq_thread     irq/175-mei      11
+  651   651 TS       - -20  39  0.0 S<   rescuer_thread edac-poller       9
+  821   821 TS       -   0  19  0.0 S    worker_thread  kworker/6:2       6
+  870   870 TS       -   0  19  0.0 Ss   poll_schedule_ rpcbind           6
+  896   896 TS       -   0  19  0.0 S    poll_schedule_ upstart-socket-   6
+  928   928 TS       - -20  39  0.0 S<   rescuer_thread rpciod            7
+  942   942 TS       - -20  39  0.0 S<   rescuer_thread nfsiod            5
+  959   959 TS       -   0  19  0.0 Ss   poll_schedule_ dbus-daemon       7
+  963   963 TS       -   0  19  0.0 Ss   ep_poll        rpc.idmapd        9
+  970   970 TS       -   0  19  0.0 Sl   poll_schedule_ rsyslogd          3
+  980   980 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.statd         7
+ 1022  1022 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              5
+ 1128  1128 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1139  1139 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1154  1154 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1156  1156 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1160  1160 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1169  1169 TS       -   0  19  0.0 Ss   poll_schedule_ acpid             7
+ 1173  1173 TS       -   0  19  0.0 Ss   hrtimer_nanosl cron              5
+ 1174  1174 TS       -   0  19  0.0 Ss   hrtimer_nanosl atd               1
+ 1194  1194 TS       -   0  19  0.0 Ssl  poll_schedule_ whoopsie          6
+ 1265  1265 TS       -   0  19  0.0 S    svc_recv       lockd             8
+ 1266  1266 TS       - -20  39  0.0 S<   rescuer_thread nfsd4             7
+ 1267  1267 TS       - -20  39  0.0 S<   rescuer_thread nfsd4_callbacks   7
+ 1268  1268 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1269  1269 TS       -   0  19  0.0 S    svc_recv       nfsd              9
+ 1270  1270 TS       -   0  19  0.0 S    svc_recv       nfsd              1
+ 1271  1271 TS       -   0  19  0.0 S    svc_recv       nfsd              5
+ 1272  1272 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1274  1274 TS       -   0  19  0.0 S    svc_recv       nfsd             10
+ 1275  1275 TS       -   0  19  0.0 S    svc_recv       nfsd              8
+ 1276  1276 TS       -   0  19  0.0 S    svc_recv       nfsd              7
+ 1298  1298 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.mountd        9
+ 1375  1375 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1384  1384 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              0
+ 1387  1387 TS       -   0  19  0.0 Sl   poll_schedule_ console-kit-dae   6
+ 1454  1454 TS       -   0  19  0.0 Sl   poll_schedule_ polkitd          10
+ 1598  1598 TS       -   0  19  0.0 S    poll_schedule_ sshd              1
+ 1599  1599 TS       -   0  19  0.0 Ss   wait           bash              7
+ 2342  2342 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              8
+ 2551  2551 TS       -   0  19  0.0 S    poll_schedule_ sshd             11
+ 2552  2552 TS       -   0  19  0.0 Ss   wait           bash              8
+11815 11815 TS       -   0  19  0.0 S    worker_thread  kworker/0:2       0
+11820 11820 TS       -   0  19  0.0 S    worker_thread  kworker/8:2       8
+11839 11839 TS       -   0  19  0.0 S    worker_thread  kworker/10:2     10
+12282 12282 TS       -   0  19  0.0 S    worker_thread  kworker/9:2       9
+15673 15673 TS       - -20  39  0.0 S<   rescuer_thread xfs_mru_cache     6
+15674 15674 TS       - -20  39  0.0 S<   rescuer_thread xfslogd           6
+15676 15676 TS       - -20  39  0.0 S<   rescuer_thread xfsdatad          6
+15677 15677 TS       - -20  39  0.0 S<   rescuer_thread xfsconvertd       6
+15678 15678 TS       -   0  19  0.0 S    xfsbufd        xfsbufd/sdb       3
+15679 15679 TS       -   0  19  0.0 S    xfsaild        xfsaild/sdb       5
+17399 17399 TS       -   0  19  0.0 S    worker_thread  kworker/6:1       6
+17408 17408 TS       -   0  19  0.0 S    bdi_writeback_ flush-8:0         6
+29203 29203 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             8
+29243 29243 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             9
+29304 29304 TS       -   0  19  0.0 S+   poll_schedule_ sudo              9
+29305 29305 TS       -   0  19  0.0 S+   wait           monitorCPUs.bas   9
+29307 29307 TS       -   0  19  0.0 R+   -              ps               11
+30413 30413 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30418 30418 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30442 30442 TS       -   0  19  0.0 S    worker_thread  kworker/4:2       4
+30444 30444 TS       -   0  19 99.9 R    -              hpcapPoll0q0      0
+30446 30446 TS       -   0  19  0.0 S    worker_thread  kworker/11:2     11
+30467 30467 TS       -   0  19 99.9 R    -              hpcapPoll2q0      2
+30476 30476 TS       -   0  19  0.0 S    wait           monitor.bash      6
+30477 30477 TS       -   0  19  0.0 S    wait           monitor.bash     10
+31532 31532 TS       -   0  19  0.0 S+   inotify_read   tail              7
+  PID   TID CLS RTPRIO  NI PRI %CPU STAT WCHAN          COMMAND         PSR
+    1     1 TS       -   0  19  0.0 Ss   poll_schedule_ init              4
+    2     2 TS       -   0  19  0.0 S    kthreadd       kthreadd          6
+    3     3 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/0       0
+    6     6 FF      99   - 139  0.0 S    cpu_stopper_th migration/0       0
+    7     7 FF      99   - 139  0.0 S    watchdog       watchdog/0        0
+    8     8 FF      99   - 139  0.0 S    cpu_stopper_th migration/1       1
+    9     9 TS       -   0  19  0.0 S    worker_thread  kworker/1:0       1
+   10    10 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/1       1
+   11    11 TS       -   0  19  0.0 S    worker_thread  kworker/0:1       0
+   12    12 FF      99   - 139  0.0 S    watchdog       watchdog/1        1
+   13    13 FF      99   - 139  0.0 S    cpu_stopper_th migration/2       2
+   14    14 TS       -   0  19  0.0 S    worker_thread  kworker/2:0       2
+   15    15 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/2       2
+   16    16 FF      99   - 139  0.0 S    watchdog       watchdog/2        2
+   17    17 FF      99   - 139  0.0 S    cpu_stopper_th migration/3       3
+   18    18 TS       -   0  19  0.0 S    worker_thread  kworker/3:0       3
+   19    19 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/3       3
+   20    20 FF      99   - 139  0.0 S    watchdog       watchdog/3        3
+   21    21 FF      99   - 139  0.0 S    cpu_stopper_th migration/4       4
+   23    23 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/4       4
+   24    24 FF      99   - 139  0.0 S    watchdog       watchdog/4        4
+   25    25 FF      99   - 139  0.0 S    cpu_stopper_th migration/5       5
+   26    26 TS       -   0  19  0.0 S    worker_thread  kworker/5:0       5
+   27    27 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/5       5
+   28    28 FF      99   - 139  0.0 S    watchdog       watchdog/5        5
+   29    29 FF      99   - 139  0.0 S    cpu_stopper_th migration/6       6
+   31    31 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/6       6
+   32    32 FF      99   - 139  0.0 S    watchdog       watchdog/6        6
+   33    33 FF      99   - 139  0.0 S    cpu_stopper_th migration/7       7
+   34    34 TS       -   0  19  0.0 S    worker_thread  kworker/7:0       7
+   35    35 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/7       7
+   36    36 FF      99   - 139  0.0 S    watchdog       watchdog/7        7
+   37    37 FF      99   - 139  0.0 S    cpu_stopper_th migration/8       8
+   39    39 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/8       8
+   40    40 FF      99   - 139  0.0 S    watchdog       watchdog/8        8
+   41    41 FF      99   - 139  0.0 S    cpu_stopper_th migration/9       9
+   43    43 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/9       9
+   44    44 FF      99   - 139  0.0 S    watchdog       watchdog/9        9
+   45    45 FF      99   - 139  0.0 S    cpu_stopper_th migration/10     10
+   47    47 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/10     10
+   48    48 FF      99   - 139  0.0 S    watchdog       watchdog/10      10
+   49    49 FF      99   - 139  0.0 S    cpu_stopper_th migration/11     11
+   51    51 TS       -   0  19  0.0 S    run_ksoftirqd  ksoftirqd/11     11
+   52    52 FF      99   - 139  0.0 S    watchdog       watchdog/11      11
+   53    53 TS       - -20  39  0.0 S<   rescuer_thread cpuset            7
+   54    54 TS       - -20  39  0.0 S<   rescuer_thread khelper           2
+   55    55 TS       -   0  19  0.0 S    devtmpfsd      kdevtmpfs         5
+   56    56 TS       - -20  39  0.0 S<   rescuer_thread netns             7
+   58    58 TS       -   0  19  0.0 S    bdi_sync_super sync_supers       1
+   59    59 TS       -   0  19  0.0 S    bdi_forker_thr bdi-default       1
+   60    60 TS       - -20  39  0.0 S<   rescuer_thread kintegrityd       7
+   61    61 TS       - -20  39  0.0 S<   rescuer_thread kblockd           7
+   62    62 TS       - -20  39  0.0 S<   rescuer_thread ata_sff           7
+   63    63 TS       -   0  19  0.0 S    hub_thread     khubd             0
+   64    64 TS       - -20  39  0.0 S<   rescuer_thread md                7
+   65    65 TS       -   0  19  0.0 S    worker_thread  kworker/4:1       4
+   67    67 TS       -   0  19  0.0 S    watchdog       khungtaskd        9
+   68    68 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd0           0
+   69    69 TS       -   0  19  0.0 S    kswapd_try_to_ kswapd1           7
+   70    70 TS       -   5  14  0.0 SN   ksm_scan_threa ksmd              7
+   71    71 TS       -  19   0  0.0 SN   khugepaged_loo khugepaged        8
+   72    72 TS       -   0  19  0.0 S    fsnotify_mark_ fsnotify_mark     7
+   73    73 TS       -   0  19  0.0 S    ecryptfs_threa ecryptfs-kthrea   7
+   74    74 TS       - -20  39  0.0 S<   rescuer_thread crypto            7
+   82    82 TS       - -20  39  0.0 S<   rescuer_thread kthrotld          7
+   83    83 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_0         9
+   84    84 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_1         6
+   85    85 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_2         8
+   86    86 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_3        10
+   87    87 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_4        11
+   88    88 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_5         0
+   91    91 TS       -   0  19  0.0 S    worker_thread  kworker/u:4       3
+   92    92 TS       -   0  19  0.0 S    worker_thread  kworker/u:5       5
+   94    94 TS       -   0  19  0.0 S    worker_thread  kworker/8:1       8
+   95    95 TS       -   0  19  0.0 S    worker_thread  kworker/10:1     10
+   96    96 TS       -   0  19  0.0 S    worker_thread  kworker/9:1       9
+   97    97 TS       -   0  19  0.0 S    worker_thread  kworker/11:1     11
+   98    98 TS       -   0  19  0.0 S    worker_thread  kworker/7:1       7
+  100   100 TS       -   0  19  0.0 S    worker_thread  kworker/2:1       2
+  106   106 TS       -   0  19  0.0 S    worker_thread  kworker/1:1       1
+  121   121 TS       - -20  39  0.0 S<   rescuer_thread devfreq_wq        7
+  122   122 TS       -   0  19  0.0 S    worker_thread  kworker/3:1       3
+  193   193 TS       -   0  19  0.0 S    worker_thread  kworker/5:1       5
+  359   359 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_6         6
+  362   362 TS       -   0  19  0.0 S    scsi_error_han scsi_eh_7         9
+  369   369 TS       - -20  39  0.0 S<   rescuer_thread scsi_wq_6         5
+  404   404 TS       -   0  19  0.0 S    kjournald2     jbd2/sda1-8       6
+  405   405 TS       - -20  39  0.0 S<   rescuer_thread ext4-dio-unwrit   7
+  501   501 TS       -   0  19  0.0 S    poll_schedule_ upstart-udev-br   2
+  504   504 TS       -   0  19  0.0 Ss   ep_poll        udevd             5
+  615   615 FF      50   -  90  0.0 S    irq_thread     irq/175-mei      11
+  651   651 TS       - -20  39  0.0 S<   rescuer_thread edac-poller       9
+  821   821 TS       -   0  19  0.0 S    worker_thread  kworker/6:2       6
+  870   870 TS       -   0  19  0.0 Ss   poll_schedule_ rpcbind           6
+  896   896 TS       -   0  19  0.0 S    poll_schedule_ upstart-socket-   6
+  928   928 TS       - -20  39  0.0 S<   rescuer_thread rpciod            7
+  942   942 TS       - -20  39  0.0 S<   rescuer_thread nfsiod            5
+  959   959 TS       -   0  19  0.0 Ss   poll_schedule_ dbus-daemon       7
+  963   963 TS       -   0  19  0.0 Ss   ep_poll        rpc.idmapd        9
+  970   970 TS       -   0  19  0.0 Sl   poll_schedule_ rsyslogd          3
+  980   980 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.statd         7
+ 1022  1022 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              5
+ 1128  1128 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1139  1139 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1154  1154 TS       -   0  19  0.0 Ss+  n_tty_read     getty             2
+ 1156  1156 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1160  1160 TS       -   0  19  0.0 Ss+  n_tty_read     getty             3
+ 1169  1169 TS       -   0  19  0.0 Ss   poll_schedule_ acpid             7
+ 1173  1173 TS       -   0  19  0.0 Ss   hrtimer_nanosl cron              5
+ 1174  1174 TS       -   0  19  0.0 Ss   hrtimer_nanosl atd               1
+ 1194  1194 TS       -   0  19  0.0 Ssl  poll_schedule_ whoopsie          6
+ 1265  1265 TS       -   0  19  0.0 S    svc_recv       lockd             8
+ 1266  1266 TS       - -20  39  0.0 S<   rescuer_thread nfsd4             7
+ 1267  1267 TS       - -20  39  0.0 S<   rescuer_thread nfsd4_callbacks   7
+ 1268  1268 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1269  1269 TS       -   0  19  0.0 S    svc_recv       nfsd              9
+ 1270  1270 TS       -   0  19  0.0 S    svc_recv       nfsd              1
+ 1271  1271 TS       -   0  19  0.0 S    svc_recv       nfsd              5
+ 1272  1272 TS       -   0  19  0.0 S    svc_recv       nfsd              6
+ 1274  1274 TS       -   0  19  0.0 S    svc_recv       nfsd             10
+ 1275  1275 TS       -   0  19  0.0 S    svc_recv       nfsd              8
+ 1276  1276 TS       -   0  19  0.0 S    svc_recv       nfsd              7
+ 1298  1298 TS       -   0  19  0.0 Ss   poll_schedule_ rpc.mountd        9
+ 1375  1375 TS       -   0  19  0.0 Ss+  n_tty_read     getty             6
+ 1384  1384 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              0
+ 1387  1387 TS       -   0  19  0.0 Sl   poll_schedule_ console-kit-dae   6
+ 1454  1454 TS       -   0  19  0.0 Sl   poll_schedule_ polkitd          10
+ 1598  1598 TS       -   0  19  0.0 S    poll_schedule_ sshd              1
+ 1599  1599 TS       -   0  19  0.0 Ss   wait           bash             10
+ 2342  2342 TS       -   0  19  0.0 Ss   poll_schedule_ sshd              8
+ 2551  2551 TS       -   0  19  0.0 S    poll_schedule_ sshd             11
+ 2552  2552 TS       -   0  19  0.0 Ss   wait           bash              8
+11815 11815 TS       -   0  19  0.0 S    worker_thread  kworker/0:2       0
+11820 11820 TS       -   0  19  0.0 S    worker_thread  kworker/8:2       8
+11839 11839 TS       -   0  19  0.0 S    worker_thread  kworker/10:2     10
+12282 12282 TS       -   0  19  0.0 S    worker_thread  kworker/9:2       9
+15673 15673 TS       - -20  39  0.0 S<   rescuer_thread xfs_mru_cache     6
+15674 15674 TS       - -20  39  0.0 S<   rescuer_thread xfslogd           6
+15676 15676 TS       - -20  39  0.0 S<   rescuer_thread xfsdatad          6
+15677 15677 TS       - -20  39  0.0 S<   rescuer_thread xfsconvertd       6
+15678 15678 TS       -   0  19  0.0 S    xfsbufd        xfsbufd/sdb       3
+15679 15679 TS       -   0  19  0.0 S    xfsaild        xfsaild/sdb       1
+17399 17399 TS       -   0  19  0.0 S    worker_thread  kworker/6:1       6
+17408 17408 TS       -   0  19  0.0 S    bdi_writeback_ flush-8:0         6
+29203 29203 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             8
+29243 29243 TS       -   0  19  0.0 S    hrtimer_nanosl sleep             9
+29315 29315 TS       -   0  19  0.0 S+   poll_schedule_ sudo              6
+29316 29316 TS       -   0  19  0.0 S+   wait           monitorCPUs.bas  11
+29318 29318 TS       -   0  19  0.0 R+   -              ps                7
+30413 30413 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30418 30418 TS       -   0  19  0.0 S    ep_poll        udevd             8
+30442 30442 TS       -   0  19  0.0 S    worker_thread  kworker/4:2       4
+30444 30444 TS       -   0  19 99.9 R    -              hpcapPoll0q0      0
+30446 30446 TS       -   0  19  0.0 S    worker_thread  kworker/11:2     11
+30467 30467 TS       -   0  19 99.9 R    -              hpcapPoll2q0      2
+30476 30476 TS       -   0  19  0.0 S    wait           monitor.bash      6
+30477 30477 TS       -   0  19  0.0 S    wait           monitor.bash     10
+31532 31532 TS       -   0  19  0.0 S+   inotify_read   tail              7
