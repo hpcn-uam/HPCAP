@@ -1,0 +1,703 @@
+/*******************************************************************************
+
+	PacketShader Kernel code for Intel 10 Gigabit PCI Express Linux driver
+	Copyright(c) 1999 - 2011 Intel Corporation.
+	
+	Date:
+		4-Jan-2011: updated to be ixgbe-3.7.17 equivalent
+
+*******************************************************************************/
+
+#include <linux/types.h>
+#include <linux/module.h>
+#include <linux/pci.h>
+#include <linux/netdevice.h>
+#include <linux/inetdevice.h>
+#include <linux/vmalloc.h>
+#include <linux/pagemap.h>
+#include <linux/string.h>
+#include <linux/in.h>
+#include <linux/ip.h>
+#include <linux/tcp.h>
+#ifdef HAVE_SCTP
+	#include <linux/sctp.h>
+#endif
+#include <linux/pkt_sched.h>
+#include <linux/ipv6.h>
+#ifdef NETIF_F_TSO
+	#include <net/checksum.h>
+	#ifdef NETIF_F_TSO6
+		#include <net/ip6_checksum.h>
+	#endif
+#endif
+#ifdef SIOCETHTOOL
+	#include <linux/ethtool.h>
+#endif
+#include <linux/kthread.h>
+#include <linux/cdev.h>
+
+
+#include "../../../include/hpcap.h"
+#include "ixgbe.h"
+
+#ifdef DEV_HPCAP
+
+#include "ixgbe_hpcap.h"
+
+#define minimo(a,b) ((a) < (b) ? (a) : (b))
+#define maximo(a,b) ((a) > (b) ? (a) : (b))
+
+
+/* Las siguientes dos variables se rellenan en ixgbe_probe() */
+int adapters_found;
+struct ixgbe_adapter * adapters[MAX_ADAPTERS];
+
+/*********************************************************************************
+ MMAP-related functions
+*********************************************************************************/
+
+void hpcap_vma_open(struct vm_area_struct *vma)
+{
+	printk(KERN_NOTICE "HPCAP: VMA open, virt %lx, phys %lx\n", vma->vm_start, vma->vm_pgoff << PAGE_SHIFT);
+}
+void hpcap_vma_close(struct vm_area_struct *vma)
+{
+	printk(KERN_NOTICE "HPCAP: VMA close.\n");
+}
+
+static struct vm_operations_struct hpcap_vm_ops = {
+	.open = hpcap_vma_open,
+	.close = hpcap_vma_close,
+};
+
+int hpcap_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	struct hpcap_buf *bufp = filp->private_data;
+
+	if( !bufp )
+	{
+		printk("HPCAP: mmapping undefined char device\n");
+		return -1;
+	}
+
+	if( !( bufp->mode & RX_MODE_MMAP ) )
+	{
+		printk("HPCAP: device hpcap%dq%d  does not support mmap() operations\n", bufp->adapter, bufp->queue);
+		return -1;
+	}
+	
+	/* Avoid two simultaneous mmap() calls from different threads/applications  */
+	if( atomic_inc_return(&bufp->mmapCount) != 1 )
+	{
+		while( atomic_read(&bufp->mmapCount) != 1 );
+	}
+	printk("HPCAP: mmaping xge%dq%d\n", bufp->adapter, bufp->queue);
+
+	if( remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)bufp->bufferCopia) >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot) )
+	{
+		printk(KERN_INFO "HPCAP: Error when trying to remap_pfn_range\n");
+		return -EAGAIN;
+	}
+
+	
+	vma->vm_ops = &hpcap_vm_ops;
+
+	printk( KERN_INFO "HPCAP: xge%dq%d's buffer mapped at 0x%08lx, sized %lu bytes [offset=%lu]\n", bufp->adapter, bufp->queue, vma->vm_start, vma->vm_end-vma->vm_start, virt_to_phys((void *)bufp->bufferCopia) - ( ( virt_to_phys((void *)bufp->bufferCopia) >> PAGE_SHIFT ) << PAGE_SHIFT ) );
+
+	hpcap_vma_open(vma);
+	
+	atomic_dec(&bufp->mmapCount);
+	
+	return 0;
+}
+/*********************************************************************************
+ MMAP-related functions (end)
+*********************************************************************************/
+
+
+
+/*********************************************************************************
+ RX-related functions
+*********************************************************************************/
+#define BUF_ALIGN 8
+#define cablen (3*sizeof(u32))
+int hpcap_rx(struct ixgbe_ring *rx_ring, int limit, char *pkt_buf, u32 *npackets, int offs, u64 *fs)
+{
+	union ixgbe_adv_rx_desc *rx_desc;
+
+	u32 len = 64, len2;
+	u32 staterr;
+
+	int qidx = rx_ring->next_to_clean;
+	int next_qidx = 0;//rx_ring->next_to_clean;
+	int cnt = 0;
+	u8 *src;
+	#ifdef RX_DEBUG
+		int r_idx = rx_ring->reg_idx;
+		struct ixgbe_adapter *adapter = rx_ring->adapter; //different from version 2.0.38
+	#endif
+	unsigned int total_rx_packets = 0;
+	unsigned int total_rx_bytes = 0;
+	u64 aux=0,aux2=0;
+	int offset=offs;
+	//int npacks=0;
+	//char auxBuf[2*sizeof(u32)+sizeof(u32)];
+	u32 *auxBuf;
+	u64 filesize = *fs;
+	struct timespec tv;
+
+	if( limit <= 0 )
+		return 0;
+
+	src = packet_buf(rx_ring, qidx);
+
+	prefetcht0(pkt_buf + (offset + 64 * 0) % DD_BUF_SIZE );
+	prefetcht0(pkt_buf + (offset + 64 * 1) % DD_BUF_SIZE );
+
+	prefetchnta(IXGBE_RX_DESC(rx_ring, qidx + 0));//different from version 2.0.38
+	prefetchnta(IXGBE_RX_DESC(rx_ring, qidx + 1));//different from version 2.0.38
+	
+	prefetchnta(src + MAX_PACKET_SIZE * 0);
+	prefetchnta(src + MAX_PACKET_SIZE * 1);
+	prefetchnta(src + MAX_PACKET_SIZE * 2);
+	prefetchnta(src + MAX_PACKET_SIZE * 3);
+
+	while (cnt < limit) 
+	{
+		rx_desc = IXGBE_RX_DESC(rx_ring, qidx);//different from version 2.0.38
+		staterr = le32_to_cpu(rx_desc->wb.upper.status_error);
+		src = packet_buf(rx_ring, qidx);
+
+		prefetchnta(src + MAX_PACKET_SIZE * 4);
+		//if (len > 64)
+		//	prefetchnta(src + MAX_PACKET_SIZE * 4 + 64);
+
+		prefetchnta(rx_desc + 2);
+		prefetcht0(pkt_buf + offset + 64 * 2);
+
+		next_qidx = (qidx + 1) % rx_ring->count;
+
+		if( !(staterr & IXGBE_RXD_STAT_DD) )
+		{
+			//descriptor vacio
+			break;
+		}
+		
+		#ifdef RX_DEBUG
+			if (unlikely(!(staterr & IXGBE_RXD_STAT_EOP)))
+			{
+				printk("found non-EOP packets!\n");
+				goto next;
+			}
+	
+			if (unlikely(staterr & IXGBE_RXDADV_ERR_FRAME_ERR_MASK))
+			{
+				printk("found error frames\n");
+				goto next;
+			}
+		#endif
+
+		len = /*744*/le16_to_cpu(rx_desc->wb.upper.length);
+		len2 = minimo(len, MAX_PACKET_SIZE);
+		/*len2 = ((cablen+len) % BUF_ALIGN);
+		if( len2 != 0 )
+			len2 = len + (BUF_ALIGN - len2 );
+		else
+			len2 = len;
+		*/
+		#ifdef RX_DEBUG
+			if( unlikely(len2 > MAX_PACKET_SIZE) )
+			{
+				printk("Invalid packet length (count=%d/%d, quidx=%d, next_to_clean=%d, size=%d)!\n", cnt, limit, qidx, rx_ring->next_to_clean, len);
+				printk("RXONLY q%d [head=%d,tail=%d]\n", r_idx, IXGBE_READ_REG(&adapter->hw, IXGBE_RDH(r_idx)), IXGBE_READ_REG(&adapter->hw, IXGBE_RDT(r_idx)) );
+				goto next;
+			}
+		#endif
+		if( unlikely( (cnt+len2) > (limit-cablen) ) )
+		{
+			break;
+		}
+		
+		if( (filesize+len2) > (DD_FILESIZE-cablen) )
+		{
+			aux2 = DD_FILESIZE - filesize;
+			// hay que rellernar con ceros
+			if( (offset+aux2) > DD_BUF_SIZE )
+			{
+				aux=DD_BUF_SIZE-offset;
+				memset(pkt_buf+offset,0 , aux);
+				memset(pkt_buf, 0, aux2-aux );
+			}
+			else
+				memset(pkt_buf+offset, 0, aux2);
+			filesize=0;
+			offset = (offset+aux2) % DD_BUF_SIZE;
+			cnt += aux2;
+		}
+		
+		/******************************************
+		 Formato de los paquetes en el stream:
+		   | Segundos 32b | Nanoseg 32b | Longitud 16b | ... datos ... |
+		******************************************/
+		//do_gettimeofday(&tv);// added by Pedro/Javi
+		getnstimeofday(&tv);// added by Pedro/Javi
+		auxBuf = (u32 *)( pkt_buf + (offset % DD_BUF_SIZE) );
+		*auxBuf = tv.tv_sec;
+		auxBuf = (u32 *)( pkt_buf + ((offset + sizeof(u32)) % DD_BUF_SIZE) );
+		*auxBuf = tv.tv_nsec;
+		auxBuf = (u32 *)( pkt_buf + ((offset + 2*sizeof(u32)) % DD_BUF_SIZE) );
+		*auxBuf = len;
+		
+		//COPIA DE LA CABECERA
+		/*if( (offset+cablen) > DD_BUF_SIZE )
+		{
+			aux=DD_BUF_SIZE-offset;
+			memcpy(pkt_buf+offset, auxBuf, aux);
+			memcpy(pkt_buf, &auxBuf[aux], cablen-aux );
+		}
+		else
+			memcpy(pkt_buf+offset, auxBuf, cablen);*/
+		offset = (offset+cablen) % DD_BUF_SIZE;
+		//COPIA DEL PAQUETE
+		if( (offset+len2) > DD_BUF_SIZE )
+		{
+			aux=DD_BUF_SIZE-offset;
+			memcpy(pkt_buf+offset, src, aux);
+			memcpy(pkt_buf, &src[aux], len2-aux );
+		}
+		else
+			memcpy(pkt_buf+offset, src, len2);
+		cnt += cablen + len2;
+		filesize += cablen + len2;
+		offset = (offset+len2) % DD_BUF_SIZE;
+		/*npacks++;
+		if( npacks % UPDATE_RING == 0 ) //multiplo de 2048
+		{
+			rx_ring->queued = qidx;
+			rx_ring->next_to_clean = qidx;
+			rx_ring->next_to_use = (qidx == 0) ? (rx_ring->count - 1) : (qidx - 1);
+			
+			ixgbe_release_rx_desc(rx_ring, rx_ring->next_to_use);
+			npacks=0;
+		}*/
+		
+		total_rx_packets++;
+		total_rx_bytes += len;
+
+next:
+		rx_desc->read.pkt_addr = rx_desc->read.hdr_addr = cpu_to_le64(packet_dma(rx_ring, qidx));
+
+		qidx = next_qidx;
+	}
+
+	if (cnt > 0)
+	{
+		rx_ring->queued = qidx;
+		rx_ring->next_to_clean = qidx;
+		rx_ring->next_to_use = (qidx == 0) ? (rx_ring->count - 1) : (qidx - 1);
+		ixgbe_release_rx_desc(rx_ring, rx_ring->next_to_use);
+
+		rx_ring->stats.packets += total_rx_packets;
+		rx_ring->stats.bytes += total_rx_bytes;
+		rx_ring->total_packets += total_rx_packets;
+		rx_ring->total_bytes += total_rx_bytes;
+	}
+
+	//if(npackets)
+	//	*npackets = npacks;
+	*fs = filesize;
+	return cnt;
+}
+
+/*********************************************************************************
+ RX-related functions (end)
+*********************************************************************************/
+
+
+/*********************************************************************************
+ basic chardev methods
+*********************************************************************************/
+int hpcap_open(struct inode *inode, struct file *filp)
+{
+	struct hpcap_buf *pbuf = container_of(inode->i_cdev, struct hpcap_buf, chard);
+
+	if( !pbuf )
+	{
+		printk("HPCAP: trying to open undefined chardev\n");
+		return -1;
+	}
+	
+	filp->private_data = pbuf;
+	//printk("HPCAP: opening char device for xge%dq%d\n",pbuf->adapter, pbuf->queue);
+	
+	if( atomic_inc_return(&pbuf->opened) > pbuf->max_opened )
+	{
+		printk("HPCAP%d-%d: already opened %d times (max:%d), can't be re-opened\n", pbuf->adapter, pbuf->queue, atomic_read(&pbuf->opened), pbuf->max_opened);
+		atomic_dec(&pbuf->opened);
+		return -1;
+	}
+
+	return 0;
+}
+
+int hpcap_release(struct inode *inode, struct file *filp)
+{
+	struct hpcap_buf *pbuf = filp->private_data;
+	
+	if( !pbuf )
+	{
+		printk("HPCAP: trying to close undefined chardev\n");
+		return -1;
+	}
+	//printk("HPCAP: closing char device for xge%dq%d\n", pbuf->adapter, pbuf->queue);
+
+
+	atomic_dec(&pbuf->opened);
+	filp->private_data = NULL;
+
+	return 0;
+}
+
+ssize_t hpcap_read(struct file *filp, char __user *dstBuf, size_t count,loff_t *f_pos)
+{
+	ssize_t retval = 0;
+	int avail, offset,aux;
+	struct hpcap_buf *buf = filp->private_data;
+	pid_t pid = current->pid;
+	
+	if( !buf )
+	{
+		printk("HPCAP: trying to read from undefined chardev\n");
+		return -1;
+	}
+
+	if( !( buf->mode & RX_MODE_READ ) )
+	{
+		printk("HPCAP: device hpcap%dq%d  does not support read() operations\n", buf->adapter, buf->queue);
+		return -1;
+	}
+
+	/* Avoid two simultaneous read() calls from different threads/applications  */
+	if( atomic_inc_return(&buf->readCount) != 1 )
+	{
+		while( atomic_read(&buf->readCount) != 1 );
+	}
+
+	avail=atomic_read(&buf->bufferCount); // bufferCount lo escriben productor y consumidor
+	if( avail == 0 )
+	{
+		//printk("HPCAP: no data available for reading\n");
+		atomic_dec(&buf->readCount);
+		return 0;
+	}
+	retval = minimo(count, avail);
+	offset = buf->bufferRdOffset;
+	if( offset + retval > DD_BUF_SIZE )
+	{
+		aux = DD_BUF_SIZE-offset;
+		copy_to_user(dstBuf, &buf->bufferCopia[offset], aux);
+		copy_to_user(&dstBuf[aux], buf->bufferCopia, retval-aux);
+	}
+	else
+	{
+		copy_to_user(dstBuf, &buf->bufferCopia[offset], retval);
+	}
+	buf->bufferRdOffset = (buf->bufferRdOffset + retval) % DD_BUF_SIZE; // written by consumer
+	atomic_sub(retval, &buf->bufferCount); // written by both producer and consumer
+
+	atomic_dec(&buf->readCount);
+
+	return retval;
+}
+
+
+
+long hpcap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	int ret = 0;
+	struct hpcap_buf *buf = filp->private_data;
+
+	/*
+	printk("hpcap_ioctl called() cmd=%u arg=%lu\n", cmd, arg);
+	*/
+	
+	if( !buf )
+	{
+		printk("HPCAP: ioctl-ing undefined char device\n");
+		return -1;
+	}
+
+	/* Avoid two simultaneous ioctl() calls from different threads/applications  */
+	if( atomic_inc_return(&buf->ioctlCount) != 1 )
+	{
+		while( atomic_read(&buf->ioctlCount) != 1 );
+	}
+
+	switch (cmd) {
+	/*case HPCAP_IOC_LIST_DEVICES:
+		ret = hpcap_list_devices((struct hpcap_device __user *)arg);
+		break;
+#if 0
+	case HPCAP_IOC_ATTACH_RX_DEVICE:
+		ret = hpcap_attach_rx_device(context, (struct hpcap_queue __user *)arg);
+		break;
+
+	case HPCAP_IOC_DETACH_RX_DEVICE:
+		ret = hpcap_detach_rx_device(context, (struct hpcap_queue __user *)arg);
+		break;
+
+	case HPCAP_IOC_RECV_CHUNK:
+		ret = hpcap_recv_chunk(context, (struct hpcap_chunk __user *)arg);
+		break;
+	case HPCAP_IOC_SEND_CHUNK:
+		ret = hpcap_send_chunk(context, (struct hpcap_chunk __user *)arg);
+		break;
+
+	case HPCAP_IOC_SLOWPATH_PACKET:
+		ret = hpcap_slowpath_packet(context, (struct hpcap_packet __user *)arg);
+		break;
+#endif
+*/
+	default:
+		ret = -ENOTTY;
+	};
+
+	//up(&context->sem);
+
+out:
+	atomic_dec(&buf->ioctlCount);
+	//printk("hpcap_ioctl returns %d\n", ret);
+	return ret;
+}
+
+/*********************************************************************************
+ basic chardev methods (end)
+*********************************************************************************/
+
+
+
+/*********************************************************************************
+ POLLING threads
+*********************************************************************************/
+#define ns(a) ( (a*HZ) / 1000ul*1000ul*1000ul )
+int hpcap_poll(void *arg)
+{
+	struct ixgbe_ring *rx_ring = arg;
+	struct hpcap_buf *buf = rx_ring->buf;
+	int retval=0;
+	int i;
+	
+	printk("HPCAP: Hello, I'm kernel thread %sq%d\n", rx_ring->adapter->netdev->name, buf->queue);
+    	while( !kthread_should_stop() )
+	{
+		//retval = hpcap_rx(rx_ring, DD_BUF_SIZE-atomic_read(&buf->global.bufferCount), buf->bufferCopia, NULL, buf->global.bufferWrOffset, &buf->bufferFileSize);
+		retval = hpcap_rx(rx_ring, DD_BUF_SIZE-atomic_read(&buf->bufferCount), buf->bufferCopia, NULL, buf->bufferWrOffset, &buf->bufferFileSize);
+		if( retval == 0 )
+		{
+			//schedule_timeout( ns(1000) );
+			schedule_timeout( ns(100) );//100 ns
+		}
+		else
+		{
+			atomic_add(retval,&buf->bufferCount); // written by both producer and consumer
+			buf->bufferWrOffset = (buf->bufferWrOffset + retval) % DD_BUF_SIZE; //written by producer
+		}
+	}
+	printk("HPCAP: Bye, kernel thread (%sq%d)\n", rx_ring->adapter->netdev->name, buf->queue);
+
+	return 0;
+}
+
+int hpcap_stop_poll_threads(struct ixgbe_adapter *adapter)
+{
+	int i;
+	
+	for(i=0;i<adapter->num_rx_queues;i++)
+	{
+		struct hpcap_buf  *bufp=adapter->rx_ring[i]->buf;
+		if(bufp->created==1)
+		{
+			kthread_stop(bufp->hilo);
+			bufp->created=0;
+			printk("HPCAP: kthread xge%dq%d successfully stopped\n", adapter->bd_number, i);
+		}
+	}
+	return 0;
+}
+
+int hpcap_launch_poll_threads(struct ixgbe_adapter *adapter)
+{
+	int i;
+	
+	for(i=0;i<adapter->num_rx_queues;i++)
+	{
+		struct hpcap_buf  *bufp=adapter->rx_ring[i]->buf;
+		if( bufp->created == 0 )
+		{
+			printk("HPCAP: Creating kthread xge%dq%d ...\n", adapter->bd_number, i);
+			bufp->hilo = kthread_create( hpcap_poll, (void *)adapter->rx_ring[0], bufp->name);
+			kthread_bind(bufp->hilo, adapter->core + i);
+			wake_up_process(bufp->hilo);
+			bufp->created=1;
+		}	
+	}
+	return 0;
+}
+
+/*********************************************************************************
+ POLLING threads (end)
+*********************************************************************************/
+
+
+/*********************************************************************************
+ REGISTER/UNREGISTER chardevs
+*********************************************************************************/
+
+
+static struct file_operations hpcap_fops = {
+	.open = hpcap_open,
+	.read = hpcap_read,
+	.release = hpcap_release,
+	.mmap = hpcap_mmap,
+	.unlocked_ioctl = hpcap_ioctl,
+};
+
+int hpcap_buf_clear(struct hpcap_buf *bufp)
+{
+	if( ( bufp->created == 1 ) || ( atomic_read(&bufp->mapped) == 1 ) || ( atomic_read(&bufp->opened) != 0 ) )
+	{
+		printk("[HPCAP] Error: trying to unregister cdev in use (if%d,q%d)  (created=%d, mapped=%d, opened=%d)\n", bufp->adapter, bufp->queue, bufp->created, atomic_read(&bufp->mapped), atomic_read(&bufp->opened) );
+		return -1;
+	}
+	#ifdef DO_BUF_ALLOC
+		if( bufp->bufferCopia )
+		{
+			kfree( bufp->bufferCopia );
+		}
+	#endif
+	bufp->bufferCopia = NULL;
+	return 0;
+}
+
+#ifndef DO_BUF_ALLOC
+	char auxBufs[DD_MAX_IFS][DD_MAX_QUEUES][DD_BUF_SIZE];
+#endif
+int hpcap_buf_init(struct hpcap_buf *bufp, struct ixgbe_adapter *adapter, int queue,struct cdev *chard)
+{
+	int i;
+	
+	atomic_set( &bufp->bufferCount, 0 );
+	bufp->bufferWrOffset = 0;
+	bufp->bufferRdOffset = 0;
+	bufp->bufferFileSize = 0;
+	
+	atomic_set( &bufp->readCount, 0 );
+	atomic_set( &bufp->ioctlCount, 0 );
+	atomic_set( &bufp->mmapCount, 0 );
+	bufp->hilo = NULL;
+	bufp->adapter = adapter->bd_number;
+	bufp->queue = queue;
+	bufp->created = 0;
+	atomic_set( &bufp->mapped, 0);
+	atomic_set( &bufp->opened, 0 );
+	bufp->mode = adapter->rx_mode;
+	bufp->max_opened = MAX_LISTENERS;
+	sprintf(bufp->name, "hpcapPoll%dq%d", adapter->bd_number, queue);
+	
+	#ifdef DO_BUF_ALLOC
+		bufp->bufferCopia = kzalloc_node( sizeof(char)*DD_BUF_SIZE, GFP_KERNEL, adapter->numa_node );
+	#else
+		bufp->bufferCopia = auxBufs[bufp->adapter][bufp->queue];
+	#endif
+	if( !(bufp->bufferCopia) )
+	{
+		printk("Error when allocating bufferCopia-%d.%d [size=%lu]\n", adapter->bd_number, queue, DD_BUF_SIZE );
+		return -1;
+	}
+	printk("Success when allocating bufferCopia-%d.%d [size=%ld]\n", adapter->bd_number, queue, ksize(bufp) );
+
+	return 0;
+}
+
+
+int hpcap_unregister_chardev(struct ixgbe_adapter *adapter)
+{
+	int i,major;
+	struct hpcap_buf *bufp;
+	dev_t dev;
+
+	major = HPCAP_MAJOR+adapter->bd_number;
+
+	for(i=0;i<adapter->num_rx_queues;i++)
+	{
+		bufp = adapter->rx_ring[i]->buf;
+		if( bufp )
+		{
+			if( hpcap_buf_clear(bufp) != 0 )
+			{
+				continue;
+			}
+			cdev_del(&bufp->chard);
+			dev = MKDEV(major, i);
+			unregister_chrdev_region(dev, 1);
+			kfree(bufp);
+			adapter->rx_ring[i]->buf = NULL;
+		}
+	}
+	return 0;	
+}
+
+
+int hpcap_register_chardev(struct ixgbe_adapter *adapter)
+{
+	int i,ret=0,major=0;
+	dev_t dev = 0;
+	struct hpcap_buf *bufp=NULL;
+
+	major = HPCAP_MAJOR+adapter->bd_number;
+	for(i=0;i<adapter->num_rx_queues;i++)
+	{
+		/*registramos un dispositivo por cola*/
+		bufp = kmalloc( sizeof(struct hpcap_buf), GFP_KERNEL );
+		if( !bufp )
+		{
+			printk("HPCAP: Error allocating hpcap_buf struct for xge%dq%d\n", adapter->bd_number, i );
+			ret = -1;
+			break;
+		}
+		adapter->rx_ring[i]->buf = bufp;
+
+		dev = MKDEV(major, i);
+		ret = register_chrdev_region(dev, 1, HPCAP_NAME) ;
+		if( ret!= 0 )
+		{
+			printk("HPCAP: Error allocating (major,minor) region for xge%dq%d\n", adapter->bd_number, i);
+			ret = -1;
+			break;
+		}
+
+		hpcap_buf_init(bufp, adapter, i, &bufp->chard);
+		cdev_init(&bufp->chard, &hpcap_fops);
+		bufp->chard.owner=THIS_MODULE;
+		bufp->chard.ops = &hpcap_fops;
+		ret = cdev_add (&bufp->chard, dev/*primer nº al que el dispositivo responde*/,1);
+		if (ret<0)
+		{
+			printk(KERN_ERR "HPCAP: Error %d adding char device \"hpcap%dq%d\"", ret, adapter->bd_number, i);
+			ret = -1;
+			break;
+		}
+		bufp=NULL;
+	}
+
+	if( ret == -1 )
+		hpcap_unregister_chardev(adapter);
+	return ret;
+}
+
+
+/*********************************************************************************
+ REGISTER/UNREGISTER chardevs (end)
+*********************************************************************************/
+
+#endif /* DEV_HPCAP */

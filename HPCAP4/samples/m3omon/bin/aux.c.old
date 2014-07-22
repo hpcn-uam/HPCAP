@@ -1,0 +1,1274 @@
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <netinet/ether.h>
+
+#include "monitor.h"
+
+extern FILE* patrol_alarm_file;
+extern u_int8_t patrol;
+
+void printTupleFileLong (IPSession *session, FILE* f)
+{
+	u_char *l,*l2;
+	l = (u_char*)(&(session->incoming.source_ip));
+	l2 = (u_char*)(&(session->incoming.destination_ip));
+
+	fprintf(f,"%u.%u.%u.%u %u.%u.%u.%u %u %u %u %u %lu %lu %lu - %u\n", l[0], l[1], l[2], l[3],l2[0], l2[1], l2[2], l2[3],session->incoming.source_port,session->incoming.destination_port,session->incoming.transport_protocol,session->incoming.npack,session->incoming.nbytes,session->firstpacket_timestamp,session->lastpacket_timestamp,session->incoming.num_flags[2]);
+
+}
+
+/*void dumpLongFlows(net *network){
+	node_l *n=NULL,*naux=NULL;
+	node_l *current_node_session_table=NULL;
+	IPSession *current_session=NULL;
+	
+	n=network->long_flow_list;
+	while(n != NULL) 
+	{	
+		current_node_session_table=(node_l*)n->data;
+		current_session=(IPSession*)current_node_session_table->data;
+		naux=n;  
+		n = list_get_next_node(&(network->long_flow_list), n);
+		printTupleFileLong (current_session, network->flow_file);
+	}
+
+}*/
+
+
+inline time_t start_capture_interval(time_t timestamp,int capture_duration){
+/*	struct tm *struct_timestamp;
+
+	struct_timestamp=gmtime(&timestamp);
+	if (capture_duration>60) //orden minutos
+		return timestamp-struct_timestamp->tm_sec-(struct_timestamp->tm_min%(capture_duration/60))*60;
+	else //orden segundos
+		return timestamp-struct_timestamp->tm_sec%capture_duration;
+*/	
+	if (capture_duration>60) //orden minutos
+		return timestamp-timestamp%60-(((timestamp/60)%60)%(capture_duration/60))*60;
+	else //orden segundos
+		return timestamp-(timestamp%60)%capture_duration;
+
+}
+
+
+void dumpAlarms(net *network, time_t current,u_int16_t capture_duration){
+	char filename[MAX_LINE];
+	//MAX_BYTES_IN
+	if(network->alarmduration_max_bytes_IN>network->maxinterval_bytes_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_bytes_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);	//intervalo anterior al lanzamiento de la alarma		
+			fprintf(network->alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+			if(patrol==1)if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual			
+		fprintf(network->alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+	//MIN_BYTES_IN
+	if(network->alarmduration_min_bytes_IN>network->mininterval_bytes_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_bytes_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);	//intervalo anterior al lanzamiento de la alarma		
+			fprintf(network->alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual		
+		fprintf(network->alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL		
+			fflush(patrol_alarm_file);
+	}
+	//MAX_PACKETS_IN
+	if(network->alarmduration_max_packets_IN>network->maxinterval_packets_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_packets_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);	//intervalo anterior al lanzamiento de la alarma
+			fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual
+		fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente
+		fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL		
+			fflush(patrol_alarm_file);
+	}
+	//MIN_PACKETS_IN
+	if(network->alarmduration_min_packets_IN>network->mininterval_packets_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_packets_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual			
+		fprintf(network->alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL			
+			fflush(patrol_alarm_file);
+	}	
+	//MAX_FLOWS_IN
+	if(network->alarmduration_max_flows_IN>network->maxinterval_flows_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_flows_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);	//intervalo anterior al lanzamiento de la alarma		
+			fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual			
+		fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente
+		fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL		
+			fflush(patrol_alarm_file);
+	}
+	//MIN_FLOWS_IN
+	if(network->alarmduration_min_flows_IN>network->mininterval_flows_IN){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_flows_IN>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual			
+		fprintf(network->alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+	//MAX_BYTES_OUT
+	if(network->alarmduration_max_bytes_OUT>network->maxinterval_bytes_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_bytes_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual		
+		fprintf(network->alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente		
+		fprintf(network->alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+	//MIN_BYTES_OUT
+	if(network->alarmduration_min_bytes_OUT>network->mininterval_bytes_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_bytes_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual			
+		fprintf(network->alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL	
+			fflush(patrol_alarm_file);
+	}
+	//MAX_PACKETS_OUT
+	if(network->alarmduration_max_packets_OUT>network->maxinterval_packets_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_packets_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual	
+		fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL	
+			fflush(patrol_alarm_file);
+	}
+	//MIN_PACKETS_OUT
+	if(network->alarmduration_min_packets_OUT>network->mininterval_packets_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_packets_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual
+		fprintf(network->alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+	//MAX_FLOWS_OUT
+	if(network->alarmduration_max_flows_OUT>network->maxinterval_flows_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_max_flows_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);	
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual	
+		fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+	//MIN_FLOWS_OUT
+	if(network->alarmduration_min_flows_OUT>network->mininterval_flows_OUT){
+		time_t start=start_capture_interval(current,capture_duration);
+		if(network->beginalarm_min_flows_OUT>=start){//alarma lanzada en este periodo
+			sprintf(filename,"%lu.pcap",start-capture_duration);//intervalo anterior al lanzamiento de la alarma			
+			fprintf(network->alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+		}
+		sprintf(filename,"%lu.pcap",start);//intervalo actual
+		fprintf(network->alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+		sprintf(filename,"%lu.pcap",start+capture_duration);//intervalo siguiente			
+		fprintf(network->alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+		if(patrol==1)//PATROL
+			fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+		fflush(network->alarm_file);
+		if(patrol==1)//PATROL
+			fflush(patrol_alarm_file);
+	}
+}
+
+
+int checkAlarms(net *network,time_t current,u_int16_t capture_duration){
+	u_int8_t flag_alarm=0;
+//MAX_BYTES_IN
+	if(network->bytes_sec_IN>network->maxthresh_bytes_IN){//alarma activa
+		network->alarmduration_max_bytes_IN++;
+		if(network->alarmduration_max_bytes_IN==1){//alarma activada en este periodo
+			network->beginalarm_max_bytes_IN=current;
+			network->alarmvalue_max_bytes_IN=network->bytes_sec_IN;
+		}
+		if(network->alarmduration_max_bytes_IN>network->maxinterval_bytes_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_bytes_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"1%u %u %u - maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL	
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_max_bytes_IN>network->maxinterval_bytes_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_bytes_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"1%u %u %u %lu maxthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_max_bytes_IN,network->netID,network->beginalarm_max_bytes_IN,current,network->alarmvalue_max_bytes_IN,filename,network->maxthresh_bytes_IN,network->maxinterval_bytes_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_bytes_IN=0;
+		network->alarmduration_max_bytes_IN=0;
+		network->alarmvalue_max_bytes_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_bytes_IN=0;
+		network->alarmduration_max_bytes_IN=0;
+		network->alarmvalue_max_bytes_IN=0;
+	}
+//MIN_BYTES_IN
+	if(network->bytes_sec_IN<network->minthresh_bytes_IN){//alarma activa
+		network->alarmduration_min_bytes_IN++;
+		if(network->alarmduration_min_bytes_IN==1){//alarma activada en este periodo
+			network->beginalarm_min_bytes_IN=current;
+			network->alarmvalue_min_bytes_IN=network->bytes_sec_IN;
+		}
+		if(network->alarmduration_min_bytes_IN>network->mininterval_bytes_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_bytes_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"2%u %u %u - minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL	
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_min_bytes_IN>network->mininterval_bytes_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_bytes_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"2%u %u %u %lu minthresh_bytes_IN %u \"%s\" %u %u\n",network->beginalarm_min_bytes_IN,network->netID,network->beginalarm_min_bytes_IN,current,network->alarmvalue_min_bytes_IN,filename,network->minthresh_bytes_IN,network->mininterval_bytes_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_bytes_IN=0;
+		network->alarmduration_min_bytes_IN=0;
+		network->alarmvalue_min_bytes_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_bytes_IN=0;
+		network->alarmduration_min_bytes_IN=0;
+		network->alarmvalue_min_bytes_IN=0;
+	}
+	//MAX_PACKETS_IN
+	if(network->packets_sec_IN>network->maxthresh_packets_IN){//alarma activa
+		network->alarmduration_max_packets_IN++;
+		if(network->alarmduration_max_packets_IN==1){//alarma activada en este periodo
+			network->beginalarm_max_packets_IN=current-network->maxinterval_packets_IN;
+			network->alarmvalue_max_packets_IN=network->packets_sec_IN;
+		}	
+		if(network->alarmduration_max_packets_IN>network->maxinterval_packets_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_packets_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"3%u %u %u - maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}
+		}
+	}
+	else if(network->alarmduration_max_packets_IN>network->maxinterval_packets_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_packets_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"3%u %u %u %lu maxthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_max_packets_IN,network->netID,network->beginalarm_max_packets_IN,current,network->alarmvalue_max_packets_IN,filename,network->maxthresh_packets_IN,network->maxinterval_packets_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_packets_IN=0;
+		network->alarmduration_max_packets_IN=0;
+		network->alarmvalue_max_packets_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_packets_IN=0;
+		network->alarmduration_max_packets_IN=0;
+		network->alarmvalue_max_packets_IN=0;
+	}
+	//MIN_PACKETS_IN
+	if(network->packets_sec_IN<network->minthresh_packets_IN){//alarma activa
+		network->alarmduration_min_packets_IN++;
+		if(network->alarmduration_min_packets_IN==1){//alarma activada en este periodo
+			network->beginalarm_min_packets_IN=current;
+			network->alarmvalue_min_packets_IN=network->packets_sec_IN;
+		}
+		if(network->alarmduration_min_packets_IN>network->mininterval_packets_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_packets_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"4%u %u %u - minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+				
+	}
+	else if(network->alarmduration_min_packets_IN>network->mininterval_packets_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_packets_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		++(network->alarmID);
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"4%u %u %u %lu minthresh_packets_IN %u \"%s\" %u %u\n",network->beginalarm_min_packets_IN,network->netID,network->beginalarm_min_packets_IN,current,network->alarmvalue_min_packets_IN,filename,network->minthresh_packets_IN,network->mininterval_packets_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL	
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_packets_IN=0;
+		network->alarmduration_min_packets_IN=0;
+		network->alarmvalue_min_packets_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_packets_IN=0;
+		network->alarmduration_min_packets_IN=0;
+		network->alarmvalue_min_packets_IN=0;
+	}
+//MAX_FLOWS_IN
+	if(network->concurrent_flows_IN>network->maxthresh_flows_IN){//alarma activa
+		network->alarmduration_max_flows_IN++;
+		if(network->alarmduration_max_flows_IN==1){//alarma activada en este periodo
+			network->beginalarm_max_flows_IN=current;
+			network->alarmvalue_max_flows_IN=network->concurrent_flows_IN;
+		}
+		if(network->alarmduration_max_flows_IN>network->maxinterval_flows_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_flows_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_max_flows_IN>network->maxinterval_flows_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_flows_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"5%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"5%u %u %u %lu maxthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_max_flows_IN,network->netID,network->beginalarm_max_flows_IN,current,network->alarmvalue_max_flows_IN,filename,network->maxthresh_flows_IN,network->maxinterval_flows_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_flows_IN=0;
+		network->alarmduration_max_flows_IN=0;
+		network->alarmvalue_max_flows_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_flows_IN=0;
+		network->alarmduration_max_flows_IN=0;
+		network->alarmvalue_max_flows_IN=0;
+	}
+	//MIN_flows_IN
+	if(network->concurrent_flows_IN<network->minthresh_flows_IN){//alarma activa
+		network->alarmduration_min_flows_IN++;
+		if(network->alarmduration_min_flows_IN==1){//alarma activada en este periodo
+			network->beginalarm_min_flows_IN=current;
+			network->alarmvalue_min_flows_IN=network->concurrent_flows_IN;
+		}
+		if(network->alarmduration_min_flows_IN>network->mininterval_flows_IN){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_flows_IN,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_min_flows_IN>network->mininterval_flows_IN){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_flows_IN,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"6%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"6%u %u %u %lu minthresh_flows_IN %u \"%s\" %u %u\n",network->beginalarm_min_flows_IN,network->netID,network->beginalarm_min_flows_IN,current,network->alarmvalue_min_flows_IN,filename,network->minthresh_flows_IN,network->mininterval_flows_IN);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_flows_IN=0;
+		network->alarmduration_min_flows_IN=0;
+		network->alarmvalue_min_flows_IN=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_flows_IN=0;
+		network->alarmduration_min_flows_IN=0;
+		network->alarmvalue_min_flows_IN=0;
+	}
+	//MAX_BYTES_OUT
+	if(network->bytes_sec_OUT>network->maxthresh_bytes_OUT){//alarma activa
+		network->alarmduration_max_bytes_OUT++;
+		if(network->alarmduration_max_bytes_OUT==1){//alarma activada en este periodo
+			network->beginalarm_max_bytes_OUT=current;
+			network->alarmvalue_max_bytes_OUT=network->bytes_sec_OUT;
+		}
+		if(network->alarmduration_max_bytes_OUT>network->maxinterval_bytes_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_bytes_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL			
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"5%u %u %u - maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_max_bytes_OUT>network->maxinterval_bytes_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_bytes_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"5%u %u %u %lu maxthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_max_bytes_OUT,network->netID,network->beginalarm_max_bytes_OUT,current,network->alarmvalue_max_bytes_OUT,filename,network->maxthresh_bytes_OUT,network->maxinterval_bytes_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL	
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_bytes_OUT=0;
+		network->alarmduration_max_bytes_OUT=0;
+		network->alarmvalue_max_bytes_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_bytes_OUT=0;
+		network->alarmduration_max_bytes_OUT=0;
+		network->alarmvalue_max_bytes_OUT=0;
+	}
+	//MIN_BYTES_OUT
+	if(network->bytes_sec_OUT<network->minthresh_bytes_OUT){//alarma activa
+		network->alarmduration_min_bytes_OUT++;
+		if(network->alarmduration_min_bytes_OUT==1){//alarma activada en este periodo
+			network->beginalarm_min_bytes_OUT=current;
+			network->alarmvalue_min_bytes_OUT=network->bytes_sec_OUT;
+		}
+		if(network->alarmduration_min_bytes_OUT>network->mininterval_bytes_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_bytes_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"6%u %u %u - minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_min_bytes_OUT>network->mininterval_bytes_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_bytes_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"6%u %u %u %lu minthresh_bytes_OUT %u \"%s\" %u %u\n",network->beginalarm_min_bytes_OUT,network->netID,network->beginalarm_min_bytes_OUT,current,network->alarmvalue_min_bytes_OUT,filename,network->minthresh_bytes_OUT,network->mininterval_bytes_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_bytes_OUT=0;
+		network->alarmduration_min_bytes_OUT=0;
+		network->alarmvalue_min_bytes_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_bytes_OUT=0;
+		network->alarmduration_min_bytes_OUT=0;
+		network->alarmvalue_min_bytes_OUT=0;
+	}
+	//MAX_PACKETS_OUT
+	if(network->packets_sec_OUT>network->maxthresh_packets_OUT){//alarma activa
+		network->alarmduration_max_packets_OUT++;
+		if(network->alarmduration_max_packets_OUT==1){//alarma activada en este periodo
+			network->beginalarm_max_packets_OUT=current-network->maxinterval_packets_OUT;
+			network->alarmvalue_max_packets_OUT=network->packets_sec_OUT;
+		}	
+		if(network->alarmduration_max_packets_OUT>network->maxinterval_packets_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_packets_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"7%u %u %u - maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL	
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_max_packets_OUT>network->maxinterval_packets_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_packets_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"7%u %u %u %lu maxthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_max_packets_OUT,network->netID,network->beginalarm_max_packets_OUT,current,network->alarmvalue_max_packets_OUT,filename,network->maxthresh_packets_OUT,network->maxinterval_packets_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL	
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_packets_OUT=0;
+		network->alarmduration_max_packets_OUT=0;
+		network->alarmvalue_max_packets_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_packets_OUT=0;
+		network->alarmduration_max_packets_OUT=0;
+		network->alarmvalue_max_packets_OUT=0;
+	}
+	//MIN_PACKETS_OUT
+	if(network->packets_sec_OUT<network->minthresh_packets_OUT){//alarma activa
+		network->alarmduration_min_packets_OUT++;
+		if(network->alarmduration_min_packets_OUT==1){//alarma activada en este periodo
+			network->beginalarm_min_packets_OUT=current;
+			network->alarmvalue_min_packets_OUT=network->packets_sec_OUT;
+		}
+		if(network->alarmduration_min_packets_OUT>network->mininterval_packets_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_packets_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"8%u %u %u - minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL	
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+				
+	}
+	else if(network->alarmduration_min_packets_OUT>network->mininterval_packets_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_packets_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		++(network->alarmID);
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"8%u %u %u %lu minthresh_packets_OUT %u \"%s\" %u %u\n",network->beginalarm_min_packets_OUT,network->netID,network->beginalarm_min_packets_OUT,current,network->alarmvalue_min_packets_OUT,filename,network->minthresh_packets_OUT,network->mininterval_packets_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_packets_OUT=0;
+		network->alarmduration_min_packets_OUT=0;
+		network->alarmvalue_min_packets_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_packets_OUT=0;
+		network->alarmduration_min_packets_OUT=0;
+		network->alarmvalue_min_packets_OUT=0;
+	}
+	//MAX_flows_OUT
+	if(network->concurrent_flows_OUT>network->maxthresh_flows_OUT){//alarma activa
+		network->alarmduration_max_flows_OUT++;
+		if(network->alarmduration_max_flows_OUT==1){//alarma activada en este periodo
+			network->beginalarm_max_flows_OUT=current;
+			network->alarmvalue_max_flows_OUT=network->concurrent_flows_OUT;
+		}
+		if(network->alarmduration_max_flows_OUT>network->maxinterval_flows_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_max_flows_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"11%u %u %u - maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_max_flows_OUT>network->maxinterval_flows_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_max_flows_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"11%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"11%u %u %u %lu maxthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_max_flows_OUT,network->netID,network->beginalarm_max_flows_OUT,current,network->alarmvalue_max_flows_OUT,filename,network->maxthresh_flows_OUT,network->maxinterval_flows_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL	
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_max_flows_OUT=0;
+		network->alarmduration_max_flows_OUT=0;
+		network->alarmvalue_max_flows_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_max_flows_OUT=0;
+		network->alarmduration_max_flows_OUT=0;
+		network->alarmvalue_max_flows_OUT=0;
+	}
+	//MIN_flows_OUT
+	if(network->concurrent_flows_OUT<network->minthresh_flows_OUT){//alarma activa
+		network->alarmduration_min_flows_OUT++;
+		if(network->alarmduration_min_flows_OUT==1){//alarma activada en este periodo
+			network->beginalarm_min_flows_OUT=current;
+			network->alarmvalue_min_flows_OUT=network->concurrent_flows_OUT;
+		}
+		if(network->alarmduration_min_flows_OUT>network->mininterval_flows_OUT){
+			char filename[MAX_LINE];
+			flag_alarm=1;
+			if(start_capture_interval(current,capture_duration)==current){//comienzo intervalo captura
+				if(start_capture_interval(network->beginalarm_min_flows_OUT,capture_duration)==(current-capture_duration)){
+					//alarma lanzada en este periodo
+					sprintf(filename,"%lu.pcap",current-capture_duration*2);			
+					fprintf(network->alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL
+						fflush(patrol_alarm_file);
+				}
+				else{
+					//alarma lanzada en periodos anteriores
+					sprintf(filename,"%lu.pcap",current-capture_duration);			
+					fprintf(network->alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					if(patrol==1)//PATROL
+						fprintf(patrol_alarm_file,"12%u %u %u - minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+					fflush(network->alarm_file);
+					if(patrol==1)//PATROL	
+						fflush(patrol_alarm_file);
+				}
+			}	
+		}
+	}
+	else if(network->alarmduration_min_flows_OUT>network->mininterval_flows_OUT){//alarma terminada
+		char filename[MAX_LINE];
+		u_int64_t timestamp=start_capture_interval(current,capture_duration);
+		u_int64_t timestamp_fin=start_capture_interval(current,capture_duration)+capture_duration;
+		if(start_capture_interval(network->beginalarm_min_flows_OUT,capture_duration)==timestamp)
+			timestamp-=capture_duration;
+		while(timestamp<=timestamp_fin){//ponemos una entrada por cada periodo de captura
+			sprintf(filename,"%lu.pcap",timestamp);			
+			fprintf(network->alarm_file,"12%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+			if(patrol==1)//PATROL
+				fprintf(patrol_alarm_file,"12%u %u %u %lu minthresh_flows_OUT %u \"%s\" %u %u\n",network->beginalarm_min_flows_OUT,network->netID,network->beginalarm_min_flows_OUT,current,network->alarmvalue_min_flows_OUT,filename,network->minthresh_flows_OUT,network->mininterval_flows_OUT);
+			fflush(network->alarm_file);
+			if(patrol==1)//PATROL
+				fflush(patrol_alarm_file);
+			timestamp+=capture_duration;
+		}
+		//resetear contadores
+		network->beginalarm_min_flows_OUT=0;
+		network->alarmduration_min_flows_OUT=0;
+		network->alarmvalue_min_flows_OUT=0;
+	}
+	else{
+		//resetear contadores
+		network->beginalarm_min_flows_OUT=0;
+		network->alarmduration_min_flows_OUT=0;
+		network->alarmvalue_min_flows_OUT=0;
+	}
+	return flag_alarm;
+}
+
+
+inline int isNet(u_int32_t ip,net *network){
+//	u_char *l,*l2,*l3;
+  //l = (u_char*)&ip;
+  //l2 = (u_char*)&(network->mask);
+  //l3 = (u_char*)&(network->ip);
+  //printf("IP:%u.%u.%u.%u  MASK:%u.%u.%u.%u NET:%u.%u.%u.%u\n", l[3], l[2], l[1], l[0],l2[3], l2[2], l2[1], l2[0],l3[3], l3[2], l3[1], l3[0]);
+  //printf("%u %u, %u %u, %u %u, %u %u\n", (l[3] & l2[0]),l3[0],(l[2] & l2[1]),l3[1],(l[1] & l2[2]),l3[2],(l[0] & l2[3]),l3[3]);
+//	return ((l[3] & l2[0])==l3[0])&&((l[2] & l2[1])==l3[1])&&((l[1] & l2[2])==l3[2])&&((l[0] & l2[3])==l3[3]);
+
+	return (ip&network->mask)==network->ip;
+}
+
+void filter_to_ip_and_mask(char *filter,u_int32_t *ip,u_int32_t *mask){
+	char direction[MAX_LINE];
+	char ip_addr[MAX_LINE];
+	int mask_net;
+
+	sscanf(filter,"%s net %[^/]/%d",direction,ip_addr,&mask_net);
+	if(!strcmp(direction,"src")||!strcmp(direction,"dst")){
+		*ip=inet_network(ip_addr);
+		if(mask_net>0)
+			*mask=0xFFFFFFFF<<(32-mask_net);
+		else
+			*mask=0;
+
+	}
+}
+
+int read_global_cfg(char *filename, char *datadir,char *capturedir,char *lecturadir,char *flowsdir,char *flowsprocesslock,char *interfaz, char *file_lectura,u_int16_t *capture_duration,u_int16_t *capturespace,char *networksfile, char *networksupdatefile, u_int16_t *networksupdateinterval,char *user_web,u_int8_t *patrol,u_int8_t *filter_inversis,u_int8_t *filter_mac_src,u_int8_t *filter_mac_dst, uint8_t *affinity_dump,uint8_t *affinity_process,uint8_t *affinity_export,uint8_t *affinity_main,uint32_t *capture_dir_duration){
+	FILE *file;
+	char line[MAX_LINE],left[MAX_LINE],right[MAX_LINE];
+
+	if(!(file=fopen(filename,"r"))){
+		return -1;
+	}
+	while(fgets(line,MAX_LINE,file)){
+		if(sscanf(line,"%[^\t\n=]=%s",left,right)==2){
+			if(strcmp(left,"datadir")==0)
+				strcpy(datadir,right);
+			else if(strcmp(left,"capturedir")==0)
+				strcpy(capturedir,right);
+			else if(strcmp(left,"lecturadir")==0)
+				strcpy(lecturadir,right);
+			else if(strcmp(left,"flowsdir")==0)
+				strcpy(flowsdir,right);
+			else if(strcmp(left,"flowsprocesslock")==0)
+				strcpy(flowsprocesslock,right);
+			else if(strcmp(left,"intf")==0)
+				strcpy(interfaz,right);
+			else if(strcmp(left,"file_lectura")==0 && strcmp(interfaz,"null")==0)
+				strcpy(file_lectura,right);
+			else if(strcmp(left,"capture_duration")==0)
+				sscanf(line,"%[^\t\n=]=%hu",left,capture_duration);
+			else if(strcmp(left,"capturespace")==0)
+				sscanf(line,"%[^\t\n=]=%hu",left,capturespace);
+			else if(strcmp(left,"networks")==0)
+				strcpy(networksfile,right);
+			else if(strcmp(left,"networksupdaterequest")==0)
+				strcpy(networksupdatefile,right);
+			else if(strcmp(left,"networksupdateinterval")==0)
+				sscanf(line,"%[^\t\n=]=%hu",left,networksupdateinterval);
+			else if(strcmp(left,"userapache")==0)
+				strcpy(user_web,right);
+			else if(strcmp(left,"patrol")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,patrol);
+			else if(strcmp(left,"filterinversis")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,filter_inversis);
+			else if(strcmp(left,"filterMACsrc")==0){
+				struct ether_addr mac;
+				ether_aton_r(right,&mac);
+				memcpy(filter_mac_src,mac.ether_addr_octet,ETH_ALEN);
+			}
+			else if(strcmp(left,"filterMACdst")==0){
+				struct ether_addr mac;
+				ether_aton_r(right,&mac);
+				memcpy(filter_mac_dst,mac.ether_addr_octet,ETH_ALEN);
+			}
+			else if(strcmp(left,"affinity_dump")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,affinity_dump);
+			else if(strcmp(left,"affinity_process")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,affinity_process);
+			else if(strcmp(left,"affinity_export")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,affinity_export);
+			else if(strcmp(left,"affinity_main")==0)
+				sscanf(line,"%[^\t\n=]=%hhu",left,affinity_main);
+			else if(strcmp(left,"capture_dir_duration")==0)
+				sscanf(line,"%[^\t\n=]=%u",left,capture_dir_duration);
+		}
+	}
+	fclose(file);
+
+	return 0;
+
+}
+
+int read_networks_cfg(char *filename,net **networks,u_int16_t *n_networks){
+	FILE *file;
+	char line[MAX_LINE],filter_in[MAX_LINE],filter_out[MAX_LINE];
+	int i;
+
+	if(!(file=fopen(filename,"r"))){
+		return -1;
+	}
+	if(fgets(line,MAX_LINE,file)==NULL){//first line
+		return -1;
+	}
+	*networks=NULL;
+	(*n_networks)=0;
+	i=0;
+	while(fgets(line,MAX_LINE,file)){
+		if(!(*networks)){
+			*networks=malloc(sizeof(net));
+		}
+		else
+			*networks=realloc(*networks,sizeof(net)*(i+1));
+		int ret;
+		if((ret=sscanf(line,"%hu,\"%[^\t\n,\"]\",\"%[^\t\n,\"]\",\"%[^\t\n,\"]\",%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u",&((*networks)[i].netID),(char *)&((*networks)[i].description),filter_in,filter_out,&((*networks)[i].maxthresh_bytes_IN),&((*networks)[i].maxinterval_bytes_IN),&((*networks)[i].minthresh_bytes_IN),&((*networks)[i].mininterval_bytes_IN),&((*networks)[i].maxthresh_bytes_OUT),&((*networks)[i].maxinterval_bytes_OUT),&((*networks)[i].minthresh_bytes_OUT),&((*networks)[i].mininterval_bytes_OUT),&((*networks)[i].maxthresh_packets_IN),&((*networks)[i].maxinterval_packets_IN),&((*networks)[i].minthresh_packets_IN),&((*networks)[i].mininterval_packets_IN),&((*networks)[i].maxthresh_packets_OUT),&((*networks)[i].maxinterval_packets_OUT),&((*networks)[i].minthresh_packets_OUT),&((*networks)[i].mininterval_packets_OUT),&((*networks)[i].maxthresh_flows_IN),&((*networks)[i].maxinterval_flows_IN),&((*networks)[i].minthresh_flows_IN),&((*networks)[i].mininterval_flows_IN),&((*networks)[i].maxthresh_flows_OUT),&((*networks)[i].maxinterval_flows_OUT),&((*networks)[i].minthresh_flows_OUT),&((*networks)[i].mininterval_flows_OUT),&((*networks)[i].threshold_duration),&((*networks)[i].threshold_rst)))==30){
+			filter_to_ip_and_mask(filter_in,&((*networks)[i].ip),&((*networks)[i].mask));
+		
+
+  //l = (u_char*)(&(networks[i].ip));
+  //l2 = (u_char*)(&(networks[i].mask));
+// printf("%u.%u.%u.%u  %u.%u.%u.%u \n", l[3], l[2], l[1], l[0],l2[3], l2[2], l2[1], l2[0]);
+
+		printf("%hu,\"%s\",\"%s\",\"%s\",%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n",((*networks)[i].netID),((*networks)[i].description),filter_in,filter_out,((*networks)[i].maxthresh_bytes_IN),((*networks)[i].maxinterval_bytes_IN),((*networks)[i].minthresh_bytes_IN),((*networks)[i].mininterval_bytes_IN),((*networks)[i].maxthresh_bytes_OUT),((*networks)[i].maxinterval_bytes_OUT),((*networks)[i].minthresh_bytes_OUT),((*networks)[i].mininterval_bytes_OUT),((*networks)[i].maxthresh_packets_IN),((*networks)[i].maxinterval_packets_IN),((*networks)[i].minthresh_packets_IN),((*networks)[i].mininterval_packets_IN),((*networks)[i].maxthresh_packets_OUT),((*networks)[i].maxinterval_packets_OUT),((*networks)[i].minthresh_packets_OUT),((*networks)[i].mininterval_packets_OUT),((*networks)[i].maxthresh_flows_IN),((*networks)[i].maxinterval_flows_IN),((*networks)[i].minthresh_flows_IN),((*networks)[i].mininterval_flows_IN),((*networks)[i].maxthresh_flows_OUT),((*networks)[i].maxinterval_flows_OUT),((*networks)[i].minthresh_flows_OUT),((*networks)[i].mininterval_flows_OUT),((*networks)[i].threshold_duration),((*networks)[i].threshold_rst));
+
+//			printf("%u,\"%s\",\"%s\",\"%s\",%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",((*networks)[i].netID),((*networks)[i].description),filter_in,filter_out,((*networks)[i].maxthresh_bytes_IN),((*networks)[i].maxinterval_bytes_IN),((*networks)[i].minthresh_bytes_IN),((*networks)[i].mininterval_bytes_IN),((*networks)[i].maxthresh_packets_IN),((*networks)[i].maxinterval_packets_IN),((*networks)[i].minthresh_packets_IN),((*networks)[i].mininterval_packets_IN),((*networks)[i].maxthresh_bytes_OUT),((*networks)[i].maxinterval_bytes_OUT),((*networks)[i].minthresh_bytes_OUT),((*networks)[i].mininterval_bytes_OUT),((*networks)[i].maxthresh_packets_OUT),((*networks)[i].maxinterval_packets_OUT),((*networks)[i].minthresh_packets_OUT),((*networks)[i].mininterval_packets_OUT));	
+			(*networks)[i].alarmduration_min_flows_OUT=0;
+			(*networks)[i].alarmduration_max_flows_OUT=0;
+			(*networks)[i].alarmduration_min_flows_IN=0;
+			(*networks)[i].alarmduration_max_flows_IN=0;
+//			(*networks)[i].long_flow_list=NULL;
+			i++;
+		}
+	}
+	(*n_networks)=i;
+	fclose(file);
+	return 0;
+
+}
+
+
+
+
+
+void week_number(time_t timestamp,u_int16_t *year,u_int16_t *week){
+	struct tm *struct_timestamp;
+	char date[100];
+
+	struct_timestamp=gmtime(&timestamp);
+	strftime(date,100,"%V-%G",struct_timestamp);
+	sscanf(date,"%hu-%hu",week,year);
+}
+
+/*
+int main(){
+
+	u_int16_t year, week;
+	time_t ts;
+	gettimeofday(&ts,NULL);
+	ts=1288964640;
+	week_number(ts,&year,&week);
+	printf("year:%d\tweek:%d\n",year,week);
+}
+
+
+
+*/

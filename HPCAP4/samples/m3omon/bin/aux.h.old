@@ -1,0 +1,17 @@
+#ifndef AUX_H
+
+#define AUX_H
+
+#include <time.h>
+
+int checkAlarms(net *network,time_t current,u_int16_t capture_duration);
+void week_number(time_t timestamp,u_int16_t *year,u_int16_t *week);
+time_t start_capture_interval(time_t timestamp,int capture_duration);
+int read_global_cfg(char *filename, char *datadir,char *capturedir,char *lecturadir,char *flowsdir,char *flowsprocesslock,char *interfaz, char *file_lectura,u_int16_t *capture_duration,u_int16_t *capturespace,char *networksfile, char *networksupdatefile, u_int16_t *networksupdateinterval,
+char *user_web,u_int8_t *patrol,u_int8_t *filter_inversis,u_int8_t *filter_mac_src,u_int8_t *filter_mac_dst,uint8_t *affinity_dump,uint8_t *affinity_process,uint8_t *affinity_export,uint8_t *affinity_main, uint32_t *capture_dir_duration);
+int read_networks_cfg(char *filename,net **networks,u_int16_t *n_networks);
+int isNet(u_int32_t ip,net *network);
+void dumpAlarms(net *network, time_t current,u_int16_t capture_duration);
+void printTupleFile2 (IPSession *session, FILE* f);
+void dumpLongFlows(net *network);
+#endif
