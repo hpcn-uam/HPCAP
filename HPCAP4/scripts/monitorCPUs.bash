@@ -42,5 +42,6 @@ datos=$(cat ${base}/auxps |
 linea="$linea $discos $datos $memdatos $mem"
 
 filename="${base}/$(date +%Y-%V)/cpus"
+mkdir -p $(dirname $filename)
 touch $filename
 echo $linea >> $filename
