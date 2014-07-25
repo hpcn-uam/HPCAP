@@ -463,7 +463,7 @@ inline u64 hpcap_read_packet(struct hpcap_handle *handle, u_char **pbuffer, u_ch
 */
 inline int hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t max_bytes_to_write)
 {
-	uint64_t aux=0, ready=minimo(handle->ready,max_bytes_to_write);
+	uint64_t aux=0, ready=minimo(handle->avail,max_bytes_to_write);
 	int ret;
 
 	if( likely( ready >= HPCAP_BS ) )
