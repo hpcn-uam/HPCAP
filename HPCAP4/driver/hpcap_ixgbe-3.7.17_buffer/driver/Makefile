@@ -361,12 +361,12 @@ uninstall:
 .PHONY: clean clear install
 
 clear:
-ifeq ($(KOBJ),$(KSRC))
-	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) clean
-else
-	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
-endif
 	rm -rf $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions *~
+#ifeq ($(KOBJ),$(KSRC))
+#	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) clean
+#else
+#	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
+#endif
 
 clean: clear
 	rm -rf $(TARGET)
