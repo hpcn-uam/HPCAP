@@ -468,6 +468,8 @@ inline int hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t max_b
 
 	if( likely( ready >= HPCAP_BS ) )
 		ready = HPCAP_BS;
+	else
+		ready = 0;
 
 	if( likely( fd && (ready>0) ) )
 	{
