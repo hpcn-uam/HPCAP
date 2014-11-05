@@ -8,6 +8,7 @@ source scripts/lib.bash
 
 dir=$(read_value_param basedir)
 version=$(read_value_param version)
+vf=$(echo $version | grep vf | wc -l)
 
 #######################
 # CLEANING
@@ -24,7 +25,14 @@ sleep 5
 echo "[ Removing modules ... ]"
 remove_module "ixgbe"
 remove_module "ps_ixgbe"
-remove_module "hpcap"
+if [ $vf -eq 0 ]
+then
+	remove_module "ixgbe"
+	remove_module "hpcap"
+else
+	remove_module "ixgbevf"
+	remove_module "hpcapvf"
+fi
 
 
 #######################
@@ -38,14 +46,28 @@ echo "[ Installing driver ... ]"
 args=""
 args+="RXQ=$(repeat $nif ${nrxq}) "
 args+="TXQ=$(repeat $nif ${ntxq}) "
-args+="VMDQ=$(repeat $nif 0) "
+if [ $vf -eq 0 ]
+then
+	args+="VMDQ=$(repeat $nif 0) "
+fi
 args+="InterruptThrottleRate=$(repeat $nif ${itr}) "
-args+="Node=$(fill_nodes $nif) "
+if [ $vf -eq 0 ]
+then
+	args+="Node=$(fill_nodes $nif) "
+fi
 args+="Core=$(fill_cores $nif) "
 args+="Caplen=$(fill caplen $nif) "
 args+="Mode=$(fill mode $nif) "
 args+="Dup=$(fill dup $nif) "
-cmd="insmod hpcap.ko $args"
+if [ $vf -eq 0 ]
+then
+	kofile="hpcap.ko"
+else
+	kofile="hpcapvf.ko"
+fi
+cmd="insmod $kofile $args"
+
+
 #compile driver (if needed)
 cd  ${dir}/driver/${version}/driver
 if [ -f hpcap.ko ]
@@ -141,8 +163,8 @@ do
 	if [ $modo -eq 2 ]
 	then
 		#hpcap mode
-		echo "     -> ${dir}/scripts/monitor.bash $iface $first"
-		taskset -c ${monitor_core} ${dir}/scripts/monitor.bash $iface $first &
+		echo "     -> ${dir}/scripts/monitor.bash $iface $first $vf"
+		taskset -c ${monitor_core} ${dir}/scripts/monitor.bash $iface $first $vf &
 		first=0
 	fi
 done

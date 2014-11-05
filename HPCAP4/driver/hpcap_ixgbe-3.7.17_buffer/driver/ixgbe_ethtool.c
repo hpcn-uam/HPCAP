@@ -2507,7 +2507,11 @@ static int ixgbe_get_ethtool_fdir_entry(struct ixgbe_adapter *adapter,
 	/* report total rule count */
 	cmd->data = (1024 << adapter->fdir_pballoc) - 2;
 
-	hlist_for_each_entry_safe(rule, node, node2,
+        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
+                hlist_for_each_entry_safe(rule, node, node2,
+        #else
+                hlist_for_each_entry_safe(rule, node2,
+        #endif /* 3.13.0 */
 				  &adapter->fdir_filter_list, fdir_node) {
 		if (fsp->location <= rule->sw_idx)
 			break;
@@ -2575,7 +2579,11 @@ static int ixgbe_get_ethtool_fdir_all(struct ixgbe_adapter *adapter,
 	/* report total rule count */
 	cmd->data = (1024 << adapter->fdir_pballoc) - 2;
 
-	hlist_for_each_entry_safe(rule, node, node2,
+        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
+                hlist_for_each_entry_safe(rule, node, node2,
+        #else
+                hlist_for_each_entry_safe(rule, node2,
+        #endif /* 3.13.0 */
 				  &adapter->fdir_filter_list, fdir_node) {
 		if (cnt == cmd->rule_cnt)
 			return -EMSGSIZE;
@@ -2678,7 +2686,11 @@ static int ixgbe_update_ethtool_fdir_entry(struct ixgbe_adapter *adapter,
 	parent = NULL;
 	rule = NULL;
 
-	hlist_for_each_entry_safe(rule, node, node2,
+        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
+                hlist_for_each_entry_safe(rule, node, node2,
+        #else
+                hlist_for_each_entry_safe(rule, node2,
+        #endif /* 3.13.0 */
 				  &adapter->fdir_filter_list, fdir_node) {
 		/* hash found, or no matching entry */
 		if (rule->sw_idx >= sw_idx)

@@ -6,10 +6,11 @@ basedir="$(read_value_param basedir)/data"
 first=$2
 iface=$1
 cpus=$3
+vf=$4
 
-if [ $# -ne 3 ]
+if [ $# -ne 4 ]
 then
-	echo "Uso: ./monitor2 <ifaz>  <first> <cpus>"
+	echo "Uso: ./monitor2 <ifaz>  <first> <cpus> <¿vf-aware?>"
 	exit 0
 fi
 
@@ -29,8 +30,11 @@ else
 	fecha=$(date +%s)
 	dir=$(date +%Y-%V)
 
-	newR=$(cat $auxfile | grep "rx_packets:" | awk '{print $2}' )	
-	newD=$(cat $auxfile | grep "rx_missed_errors:" | awk '{print $2}' )	
+	newR=$(cat $auxfile | grep "rx_packets:" | awk '{print $2}' )
+	if [ $vf -eq 0 ]
+	then
+		newD=$(cat $auxfile | grep "rx_missed_errors:" | awk '{print $2}' )
+	fi
 	newRB=$(cat $auxfile | grep "rx_bytes:" | awk '{print $2}' )
 	bTot=$(cat $auxfile | grep "rx_bytes_nic:" | awk '{print $2}' )
 	newDB=$(( $bTot - $newRB ))
@@ -40,14 +44,19 @@ fi
 
 if [ $first -eq 0 ]
 then
-	lastD=$(cat "${monitordir}/${iface}_lastD.dat")
 	lastR=$(cat "${monitordir}/${iface}_lastR.dat")
 	lastRB=$(cat "${monitordir}/${iface}_lastRB.dat")
 	lastDB=$(cat "${monitordir}/${iface}_lastDB.dat")
 	lastFecha=$(cat "${monitordir}/${iface}_lastFecha.dat")
 	
+	if [ $vf -eq 0 ]
+	then
+		lastD=$(cat "${monitordir}/${iface}_lastD.dat")
+		lost=$(( $newD - $lastD ))
+	else
+		lost=0
+	fi
 	interval=$(( $fecha - $lastFecha ))
-	lost=$(( $newD - $lastD ))
 	rx=$(( $newR - $lastR ))
 	bytesRx=$(( $newRB - $lastRB ))
 	bitsRx=$(( 8 * $bytesRx ))

@@ -1,7 +1,7 @@
 ################################################################################
 #
-# Intel 10 Gigabit PCI Express Linux driver
-# Copyright(c) 1999 - 2011 Intel Corporation.
+# Intel 82599 Virtual Function driver
+# Copyright (c) 1999 - 2014 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -11,10 +11,6 @@
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 #
 # The full GNU General Public License is included in this distribution in
 # the file called "COPYING".
@@ -29,25 +25,16 @@
 # Driver files
 
 # core driver files
-CFILES = ixgbe_main.c ixgbe_hpcap.c ixgbe_common.c ixgbe_api.c ixgbe_param.c \
-         ixgbe_ethtool.c kcompat.c ixgbe_82598.c \
-         ixgbe_82599.c ixgbe_x540.c \
-         ixgbe_sriov.c ixgbe_mbx.c \
-         ixgbe_dcb.c ixgbe_dcb_82598.c \
-         ixgbe_dcb_82599.c \
-         ixgbe_sysfs.c \
-         ixgbe_procfs.c \
-         ixgbe_phy.c
-HFILES = ixgbe.h ixgbe_hpcap.h ixgbe_common.h ixgbe_api.h ixgbe_osdep.h kcompat.h \
-         ixgbe_sriov.h ixgbe_mbx.h \
-         ixgbe_dcb.h \
-         ixgbe_phy.h \
+CFILES = ixgbevf_main.c ixgbevf_hpcap.c ixgbevf_param.c ixgbevf_ethtool.c kcompat.c \
+         ixgbe_vf.c ixgbe_mbx.c
+HFILES = ixgbevf.h ixgbevf_hpcap.h ixgbe_vf.h ixgbe_common.h ixgbe_mbx.h \
 	 ../../../include/hpcap.h
+
 ifeq (,$(BUILD_KERNEL))
 BUILD_KERNEL=$(shell uname -r)
 endif
 
-DRIVER_NAME=hpcap
+DRIVER_NAME=hpcapvf
 
 
 ###########################################################################
@@ -87,23 +74,21 @@ endif
 endif
 
 # Version file Search Path
-VSP := 	$(KOBJ)/include/generated/utsrelease.h \
+VSP :=  $(KOBJ)/include/generated/utsrelease.h \
         $(KOBJ)/include/linux/utsrelease.h \
-	$(KOBJ)/include/linux/version.h \
-	$(KOBJ)/include/generated/uapi/linux/version.h \
+        $(KOBJ)/include/linux/version.h \
+        $(KOBJ)/include/generated/uapi/linux/version.h \
         /boot/vmlinuz.version.h
 
 # Config file Search Path
-CSP :=  $(KOBJ)/include/generated/autoconf.h \
-        $(KOBJ)/include/linux/autoconf.h \
+CSP :=  $(KSRC)/include/generated/autoconf.h \
+        $(KSRC)/include/linux/autoconf.h \
         /boot/vmlinuz.autoconf.h
 
 # prune the lists down to only files that exist
 test_file = $(shell [ -f $(file) ] && echo $(file))
 VSP := $(foreach file, $(VSP), $(test_file))
 CSP := $(foreach file, $(CSP), $(test_file))
-
-##$(info $(VSP))
 
 # and use the first valid entry in the Search Paths
 ifeq (,$(VERSION_FILE))
@@ -184,7 +169,7 @@ endif
 endif
 
 KVER_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
-	grep -m 1 LINUX_VERSION_CODE | awk '{ print $$3 }' | sed 's/\"//g')
+	   grep -m 1 LINUX_VERSION_CODE | awk '{ print $$3 }' | sed 's/\"//g')
 
 # abort the build on kernels older than 2.4.0
 ifneq (1,$(shell [ $(KVER_CODE) -ge 132096 ] && echo 1 || echo 0))
@@ -192,25 +177,9 @@ ifneq (1,$(shell [ $(KVER_CODE) -ge 132096 ] && echo 1 || echo 0))
           *** This driver is not supported on kernel versions older than 2.4.0)
 endif
 
-# Add DCB netlink source if our kernel is 2.6.23 or newer
-ifeq (1,$(shell [ $(KVER_CODE) -ge 132631 ] && echo 1 || echo 0))
-  CFILES += ixgbe_dcb_nl.c
-endif
 
-# Add FCoE source if FCoE is supported by the kernel
-FCOE := $(shell grep -wE 'CONFIG_FCOE|CONFIG_FCOE_MODULE' $(CONFIG_FILE) | \
-	awk '{print $$3}')
-ifeq ($(FCOE), 1)
-  CFILES += ixgbe_fcoe.c
-  HFILES += ixgbe_fcoe.h
-endif
-
-# set the install path before and after 3.2.0
-ifeq (1,$(shell [ $(KVER_CODE) -lt 197120 ] && echo 1 || echo 0))
+# set the install path
 INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/$(DRIVER_NAME)
-else
-INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/ethernet/intel/$(DRIVER_NAME)
-endif
 
 # look for SMP in config.h
 SMP := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(CONFIG_FILE) | \
@@ -281,6 +250,7 @@ endif
 ifneq (,$(wildcard /etc/fedora-release))
   EXTRA_CFLAGS += -fno-strict-aliasing
 endif
+
 CFLAGS += $(EXTRA_CFLAGS)
 
 .SILENT: $(TARGET)
@@ -358,16 +328,12 @@ uninstall:
 		rm -f $(MANDIR)/man$(MANSECTION)/$(MANFILE).gz ; \
 	fi
 
-.PHONY: clean clear install
+.PHONY: clean install
 
-clear:
+clean:
 ifeq ($(KOBJ),$(KSRC))
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) clean
 else
 	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
 endif
-	rm -rf $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions *~
-
-clean: clear
-	rm -rf $(TARGET)
-
+	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions

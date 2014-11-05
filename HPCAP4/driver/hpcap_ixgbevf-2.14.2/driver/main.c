@@ -2025,12 +2025,7 @@ void ixgbe_alloc_rx_buffers(struct ixgbe_ring *rx_ring, u16 cleaned_count)
 		} else {
 			IXGBE_CB(skb)->vid = 0;
 #else
-                        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
-                                __vlan_hwaccel_put_tag(skb, vid);
-                        #else
-                                __vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vid);
-                        #endif
-
+			__vlan_hwaccel_put_tag(skb, vid);
 #endif
 		}
 
@@ -2296,11 +2291,7 @@ next_desc:
 		} else {
 			IXGBE_CB(skb)->vid = 0;
 #else
-                        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
-                                __vlan_hwaccel_put_tag(skb, vid);
-                        #else
-                                __vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vid);
-                        #endif
+			__vlan_hwaccel_put_tag(skb, vid);
 #endif
 		}
 
@@ -5285,11 +5276,7 @@ s32 ixgbe_dcb_hw_ets(struct ixgbe_hw *hw, struct ieee_ets *ets, int max_frame)
 	if (!hlist_empty(&adapter->fdir_filter_list))
 		ixgbe_fdir_set_input_mask_82599(hw, &adapter->fdir_mask);
 
-        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
-                hlist_for_each_entry_safe(filter, node, node2,
-        #else
-                hlist_for_each_entry_safe(filter, node2,
-        #endif /* 3.13.0 */
+	hlist_for_each_entry_safe(filter, node, node2,
 				  &adapter->fdir_filter_list, fdir_node) {
 		ixgbe_fdir_write_perfect_filter_82599(hw,
 				&filter->filter,
@@ -5785,11 +5772,7 @@ void ixgbe_clean_rx_ring(struct ixgbe_ring *rx_ring)
 
 	spin_lock(&adapter->fdir_perfect_lock);
 
-        #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
-                hlist_for_each_entry_safe(filter, node, node2,
-        #else
-                hlist_for_each_entry_safe(filter, node2,
-        #endif /* 3.13.0 */
+	hlist_for_each_entry_safe(filter, node, node2,
 				  &adapter->fdir_filter_list, fdir_node) {
 		hlist_del(&filter->fdir_node);
 		kfree(filter);

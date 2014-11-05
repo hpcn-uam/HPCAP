@@ -459,9 +459,9 @@ inline u64 hpcap_read_packet(struct hpcap_handle *handle, u_char **pbuffer, u_ch
 	- max_bytes_to_write: maximum amount of bytes to be written to the output file
 
   return:
-	number of bytes read
+	number of bytes read (-1 on error)
 */
-inline int hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t max_bytes_to_write)
+inline uint64_t hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t max_bytes_to_write)
 {
 	uint64_t aux=0, ready=minimo(handle->avail,max_bytes_to_write);
 	int ret;
@@ -475,22 +475,38 @@ inline int hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t max_b
 	{
 		if( (handle->rdoff + ready ) > handle->bufSize )
 		{
+			printf("Entra en el bloque de escritura multiple\n");
 			if( handle->rdoff > handle->bufSize )
 			{
 				printf("Error grave en hpcap_write_block (rdoff=%lu, bufsize=%lu)\n", handle->rdoff, handle->bufSize);
 				exit(-1);
 			}
 			aux = handle->bufSize - handle->rdoff;
-			ret = write( fd, &handle->buf[ handle->rdoff ], aux);
-			ret += write( fd, handle->buf, ready-aux);
+			if( write( fd, &handle->buf[ handle->rdoff ], aux) != aux)
+			{
+				ready=-1;
+				printf("Error en escritura 1\n");
+				goto fin;
+			}
+			if( write( fd, handle->buf, ready-aux) !=( ready-aux) )
+			{
+				ready=-1;
+				printf("Error en escritura 2\n");
+				goto fin;
+			}
 		}
 		else
 		{
-			ret = write( fd, &handle->buf[ handle->rdoff ], ready);
+			if( write( fd, &handle->buf[ handle->rdoff ], ready) != ready )
+			{
+				printf("Error en escritura 3\n");
+				ready=-1;
+				goto fin;
+			}
 		}
+		handle->rdoff = (handle->rdoff+ready) % handle->bufSize;
+		handle->acks += ready;
 	}
-	handle->rdoff = (handle->rdoff+ready) % handle->bufSize;
-	handle->acks += ready;
-
+fin:
 	return ready;
 }

@@ -197,7 +197,7 @@ int hpcap_dup_table(struct hpcap_handle *handle);
 #endif
 void hpcap_pcap_header(void *header, u32 secs, u32 nsecs, u16 len, u16 caplen);
 u64 hpcap_read_packet(struct hpcap_handle *hp, u_char **pbuffer, u_char *auxbuf, void *header, void (* read_header)(void *, u32, u32, u16, u16) );
-inline int hpcap_write_block(struct hpcap_handle *hp, int fd, uint64_t max_bytes_to_write);
+inline uint64_t hpcap_write_block(struct hpcap_handle *hp, int fd, uint64_t max_bytes_to_write);
 
 #endif /* __KERNEL__ */
 

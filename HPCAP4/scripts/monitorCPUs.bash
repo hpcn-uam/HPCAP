@@ -4,7 +4,8 @@ source scripts/lib.bash
 
 #program="monitor_flujos"
 program="mgmon"
-diskdir="almacenamiento"
+#diskdir="almacenamiento"
+diskdir="disco01"
 
 base="$(read_value_param basedir)/data"
 linea="$(date +%s) "
@@ -39,9 +40,8 @@ datos=$(cat ${base}/auxps |
 		}\
 		print cadena;\
 	}')
-linea="$linea $discos $datos $memdatos $mem"
+linea="$linea D:$discos $datos $memdatos $mem"
 
 filename="${base}/$(date +%Y-%V)/cpus"
-mkdir -p $(dirname $filename)
 touch $filename
 echo $linea >> $filename
