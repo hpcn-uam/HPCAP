@@ -37,18 +37,22 @@
 #include <linux/cdev.h>
 
 
-#include "../../../include/hpcap.h"
-#include "ixgbe.h"
+#include "../../include/hpcap.h"
+#if defined(HPCAP_IXGBE)
+	#include "../hpcap_ixgbe-3.7.17_buffer/driver/ixgbe.h"
+#elif defined(HPCAP_IXGBEVF)
+	#include "../hpcap_ixgbevf-2.14.2/driver/ixgbevf.h"
+#endif
 
 #ifdef DEV_HPCAP
 
-#include "ixgbe_hpcap.h"
+#include "driver_hpcap.h"
 
 
 
-/* Las siguientes dos variables se rellenan en ixgbe_probe() */
+/* Las siguientes dos variables se rellenan en ixgbe[vf]_probe() */
 int adapters_found;
-struct ixgbe_adapter * adapters[IXGBE_MAX_NIC];
+HW_ADAPTER * adapters[HPCAP_MAX_NIC];
 
 /*********************************************************************************
  MMAP-related functions
@@ -234,13 +238,13 @@ int check_duplicate(u32 hw_hash, u16 len, u8 *pkt, struct timespec * tv, struct 
 //#define BUF_ALIGN 4
 #define CALC_CAPLEN(cap,len) ( (cap==0) ? (len) : (minimo(cap,len)) )
 //int paqn=0;
-u64 hpcap_rx(struct ixgbe_ring *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, int offs, u64 *fs, u16 caplen
+u64 hpcap_rx(HW_RING *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, int offs, u64 *fs, u16 caplen
 #ifdef REMOVE_DUPS
 	, struct hpcap_dup_info ** duptable
 #endif
 )
 {
-	union ixgbe_adv_rx_desc *rx_desc;
+	HW_RX_DESCR *rx_desc;
 
 	u16 len=64, capl, fraglen;
 	u32 staterr;
@@ -256,7 +260,7 @@ u64 hpcap_rx(struct ixgbe_ring *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, 
 	unsigned char tmp_h[RAW_HLEN];
 	#ifdef RX_DEBUG
 		int r_idx = rx_ring->reg_idx;
-		struct ixgbe_adapter *adapter = rx_ring->adapter; //different from version 2.0.38
+		HW_ADAPTER *adapter = rx_ring->adapter; //different from version 2.0.38
 	#endif
 	u8* jf_src[MAX_DESCRIPTORS];
 	int jf=0, i=0;
@@ -277,8 +281,8 @@ u64 hpcap_rx(struct ixgbe_ring *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, 
 		prefetcht0(pkt_buf + (offset + 64 * 0) % bufsize );
 		prefetcht0(pkt_buf + (offset + 64 * 1) % bufsize );
 	}
-	prefetchnta(IXGBE_RX_DESC(rx_ring, qidx + 0));//different from version 2.0.38
-	prefetchnta(IXGBE_RX_DESC(rx_ring, qidx + 1));//different from version 2.0.38
+	prefetchnta(HW_RX_DESC(rx_ring, qidx + 0));//different from version 2.0.38
+	prefetchnta(HW_RX_DESC(rx_ring, qidx + 1));//different from version 2.0.38
 	
 	#ifdef DO_PREFETCH
 		prefetchnta(src + MAX_DESCR_SIZE * 0);
@@ -296,7 +300,7 @@ u64 hpcap_rx(struct ixgbe_ring *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, 
 		do
 		{
 		#endif
-			rx_desc = IXGBE_RX_DESC(rx_ring, next_qidx);//different from version 2.0.38
+			rx_desc = HW_RX_DESC(rx_ring, next_qidx);//different from version 2.0.38
 			staterr = le32_to_cpu(rx_desc->wb.upper.status_error);
 			src = packet_buf(rx_ring, next_qidx);
 
@@ -318,7 +322,7 @@ u64 hpcap_rx(struct ixgbe_ring *rx_ring, u64 limit, char *pkt_buf, u64 bufsize, 
 			if( unlikely( !pkt_buf ) )
 				goto ignore;
 			
-			#if RX_DEBUG
+			#ifdef RX_DEBUG
 			if( !(staterr & IXGBE_RXD_STAT_EOP) )
 			{
 				printk( KERN_INFO "[HPCAP] a jumboframe appeared (len: %d)\n", le16_to_cpu( rx_desc->wb.upper.length ));
@@ -486,7 +490,7 @@ done:
 		rx_ring->queued = qidx;
 		rx_ring->next_to_clean = qidx;
 		rx_ring->next_to_use = (qidx == 0) ? (rx_ring->count - 1) : (qidx - 1);
-		ixgbe_release_rx_desc(rx_ring, rx_ring->next_to_use);
+		HW_RELEASE_RX_DESCR(rx_ring, rx_ring->next_to_use);
 		
 		if( likely( pkt_buf ) )
 		{
@@ -526,11 +530,11 @@ void hpcap_rst_listener(struct hpcap_listener *list)
  NOTE:
 	if global == NULL => list is the global listener
 */
-void hpcap_push_listener(struct hpcap_listener *list, int count, struct hpcap_listener *global, u64 bufsize)
+void hpcap_push_listener(struct hpcap_listener *list, u64 count, struct hpcap_listener *global, u64 bufsize)
 {
 	if( avail_bytes(list) < count )
 	{
-		printk("[PUSH] Error => RD:%lu WR:%lu avail:%lu count:%lu\n", list->bufferRdOffset, list->bufferWrOffset, avail_bytes(list), count);
+		printk("[PUSH] Error => RD:%llu WR:%llu avail:%llu count:%llu\n", list->bufferRdOffset, list->bufferWrOffset, avail_bytes(list), count);
 	}
 	if( !global )
 	{//then "list" is the global listener
@@ -556,7 +560,7 @@ void hpcap_pop_listener(struct hpcap_listener *list, u64 count, u64 bufsize )
 {
 	if( used_bytes(list) < count )
 	{
-		printk("[POP] Error => RD:%lu WR:%lu used:%lu count:%lu\n", list->bufferRdOffset, list->bufferWrOffset, used_bytes(list), count);
+		printk("[POP] Error => RD:%llu WR:%llu used:%llu count:%llu\n", list->bufferRdOffset, list->bufferWrOffset, used_bytes(list), count);
 	}
 	list->bufferRdOffset = (list->bufferRdOffset + count) % bufsize; // written by consumer
 }
@@ -564,7 +568,7 @@ void hpcap_pop_listener(struct hpcap_listener *list, u64 count, u64 bufsize )
 int hpcap_pop_global_listener(struct hpcap_listener *global, struct hpcap_listener *listeners, u64 bufsize)
 {
 	int i;
-	u32 minDist = bufsize+1;
+	u64 minDist = bufsize+1;
 	int dist;
 	
 	for(i=0; i<MAX_LISTENERS; i++)
@@ -583,7 +587,7 @@ int hpcap_pop_global_listener(struct hpcap_listener *global, struct hpcap_listen
 		//printk("[POP global] %d bytes\n", minDist);
 		if( used_bytes(global) < minDist )
 		{
-			printk("[POPg] Error => RD:%lu WR:%lu used:%lu count:%lu\n", global->bufferRdOffset, global->bufferWrOffset, used_bytes(global), minDist);
+			printk("[POPg] Error => RD:%llu WR:%llu used:%llu count:%llu\n", global->bufferRdOffset, global->bufferWrOffset, used_bytes(global), minDist);
 		}
 		global->bufferRdOffset = (global->bufferRdOffset + minDist) % bufsize;
 		//hpcap_pop_listener( global, minDist, bufsize);
@@ -952,7 +956,7 @@ long hpcap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg2)
 *********************************************************************************/
 int hpcap_poll(void *arg)
 {
-	struct ixgbe_ring *rx_ring = arg;
+	HW_RING *rx_ring = arg;
 	struct hpcap_buf *buf = rx_ring->buf;
 	u64 retval=0;
 	u64 avail=0;
@@ -985,7 +989,7 @@ int hpcap_poll(void *arg)
 		#endif
 		if( retval > avail )
 		{
-			printk("Leyendo mas de lo que se puede!!!!! (leidos:%d, avail=%llu, BUF=%llu, bufcount=%llu)\n", retval, avail, buf->bufSize, used_bytes(&buf->global) );
+			printk("Leyendo mas de lo que se puede!!!!! (leidos:%llu, avail=%llu, BUF=%llu, bufcount=%llu)\n", retval, avail, buf->bufSize, used_bytes(&buf->global) );
 		}
 		if( retval == 0 )
 		{
@@ -1020,7 +1024,7 @@ int hpcap_poll(void *arg)
 	return 0;
 }
 
-int hpcap_stop_poll_threads(struct ixgbe_adapter *adapter)
+int hpcap_stop_poll_threads(HW_ADAPTER *adapter)
 {
 	int i;
 	
@@ -1037,7 +1041,7 @@ int hpcap_stop_poll_threads(struct ixgbe_adapter *adapter)
 	return 0;
 }
 
-int hpcap_launch_poll_threads(struct ixgbe_adapter *adapter)
+int hpcap_launch_poll_threads(HW_ADAPTER *adapter)
 {
 	int i;
 	
@@ -1119,7 +1123,7 @@ int hpcap_buf_clear(struct hpcap_buf *bufp)
 	//char __attribute__((aligned(0x1000))) auxBufs[HPCAP_BUF_SIZE];//align to 4KB page size
 	char auxBufs[PAGE_SIZE+HPCAP_BUF_SIZE];//align to 4KB page size
 #endif
-int hpcap_buf_init(struct hpcap_buf *bufp, struct ixgbe_adapter *adapter, int queue,struct cdev *chard, u64 size, int ifnum)
+int hpcap_buf_init(struct hpcap_buf *bufp, HW_ADAPTER *adapter, int queue,struct cdev *chard, u64 size, u64 bufoffset, int ifnum)
 {
 	int i;
 	u64 offset = PAGE_SIZE-get_buf_offset(auxBufs);
@@ -1141,9 +1145,9 @@ int hpcap_buf_init(struct hpcap_buf *bufp, struct ixgbe_adapter *adapter, int qu
 		bufp->bufferCopia = kmalloc_node( sizeof(char)*HPCAP_BUF_SIZE, GFP_KERNEL, adapter->numa_node );
 		bufp->bufSize = HPCAP_BUF_SIZE;
 	#else /* DO_BUF_ALLOC */
-		bufp->bufSize = size/adapter->num_rx_queues;
-		bufp->bufferCopia = &auxBufs[ offset + size*ifnum + bufp->queue*bufp->bufSize ];
-		printk("[hpcap%dq%d] offset:%llu, size:%llu, total:%lu\n", bufp->adapter, bufp->queue, size*ifnum + bufp->queue*bufp->bufSize, bufp->bufSize, HPCAP_BUF_SIZE );
+		bufp->bufSize = size;
+		bufp->bufferCopia = &auxBufs[ offset + bufoffset ];
+		printk("[hpcap%dq%d] offset:%llu, size:%llu, total:%lu\n", bufp->adapter, bufp->queue, bufoffset, bufp->bufSize, HPCAP_BUF_SIZE );
 	#endif /* DO_BUF_ALLOC */
 	if( !(bufp->bufferCopia) )
 	{
@@ -1200,7 +1204,7 @@ int hpcap_buf_init(struct hpcap_buf *bufp, struct ixgbe_adapter *adapter, int qu
 }
 
 
-int hpcap_unregister_chardev(struct ixgbe_adapter *adapter)
+int hpcap_unregister_chardev(HW_ADAPTER *adapter)
 {
 	int i,major;
 	struct hpcap_buf *bufp;
@@ -1228,13 +1232,14 @@ int hpcap_unregister_chardev(struct ixgbe_adapter *adapter)
 }
 
 
-int hpcap_register_chardev(struct ixgbe_adapter *adapter, u64 size, int ifnum)
+int hpcap_register_chardev(HW_ADAPTER *adapter, u64 size, u64 offset, int ifnum)
 {
 	int i,ret=0,major=0;
 	dev_t dev = 0;
 	struct hpcap_buf *bufp=NULL;
 
 	major = HPCAP_MAJOR+adapter->bd_number;
+	printk("<hpcap%d> tiene %d rxqs\n", adapter->bd_number, adapter->num_rx_queues);
 	for(i=0;i<adapter->num_rx_queues;i++)
 	{
 		/*registramos un dispositivo por cola*/
@@ -1256,7 +1261,7 @@ int hpcap_register_chardev(struct ixgbe_adapter *adapter, u64 size, int ifnum)
 			break;
 		}
 
-		hpcap_buf_init(bufp, adapter, i, &bufp->chard, size, ifnum);
+		hpcap_buf_init(bufp, adapter, i, &bufp->chard, size, offset, ifnum);
 		cdev_init(&bufp->chard, &hpcap_fops);
 		bufp->chard.owner=THIS_MODULE;
 		bufp->chard.ops = &hpcap_fops;

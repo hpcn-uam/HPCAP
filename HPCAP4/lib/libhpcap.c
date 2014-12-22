@@ -467,13 +467,18 @@ inline uint64_t hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t 
 	int ret;
 
 	if( likely( ready >= HPCAP_BS ) )
+	{
 		ready = HPCAP_BS;
+	}
 	else
+	{
 		ready = 0;
+		goto fin;
+	}
 
 	if( likely( fd && (ready>0) ) )
 	{
-		if( (handle->rdoff + ready ) > handle->bufSize )
+		if( unlikely( (handle->rdoff + ready ) > handle->bufSize ) )
 		{
 			printf("Entra en el bloque de escritura multiple\n");
 			if( handle->rdoff > handle->bufSize )
@@ -504,9 +509,9 @@ inline uint64_t hpcap_write_block(struct hpcap_handle *handle, int fd, uint64_t 
 				goto fin;
 			}
 		}
-		handle->rdoff = (handle->rdoff+ready) % handle->bufSize;
-		handle->acks += ready;
 	}
+	handle->rdoff = (handle->rdoff+ready) % handle->bufSize;
+	handle->acks += ready;
 fin:
 	return ready;
 }

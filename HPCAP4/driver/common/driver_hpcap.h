@@ -3,11 +3,19 @@
 
 #include <linux/cdev.h>
 
-#include "../../../include/hpcap.h"
+#include "../../include/hpcap.h"
 
-
-#define packet_buf(ring,i) ( (u8 *) ( ring->window[i >> IXGBEVF_SUBWINDOW_BITS] + (i & IXGBEVF_SUBWINDOW_MASK)*MAX_DESCR_SIZE ) )
-#define packet_dma(ring,i) ( (u64) ( ring->dma_window[i >> IXGBEVF_SUBWINDOW_BITS] + (i & IXGBEVF_SUBWINDOW_MASK) * MAX_DESCR_SIZE ) )
+#if defined(HPCAP_IXGBE)
+	#define packet_buf(ring,i) ( (u8 *) ( ring->window[i >> IXGBE_SUBWINDOW_BITS] + (i & IXGBE_SUBWINDOW_MASK)*MAX_DESCR_SIZE ) )
+	#define packet_dma(ring,i) ( (u64) ( ring->dma_window[i >> IXGBE_SUBWINDOW_BITS] + (i & IXGBE_SUBWINDOW_MASK) * MAX_DESCR_SIZE ) )
+	typedef struct ixgbe_option DRIVER_OPTION;
+	#define DRIVER_VALIDATE_OPTION(a,b) ixgbe_validate_option(a,b)
+#elif defined(HPCAP_IXGBEVF)
+	#define packet_buf(ring,i) ( (u8 *) ( ring->window[i >> IXGBEVF_SUBWINDOW_BITS] + (i & IXGBEVF_SUBWINDOW_MASK)*MAX_DESCR_SIZE ) )
+	#define packet_dma(ring,i) ( (u64) ( ring->dma_window[i >> IXGBEVF_SUBWINDOW_BITS] + (i & IXGBEVF_SUBWINDOW_MASK) * MAX_DESCR_SIZE ) )
+	typedef struct ixgbevf_option DRIVER_OPTION;
+	#define DRIVER_VALIDATE_OPTION(a,b) ixgbevf_validate_option(a,b)
+#endif
 
 #define MAX_LISTENERS 1
 #define RX_MODE_READ 1
@@ -61,9 +69,9 @@ ssize_t hpcap_read(struct file *, char __user *, size_t, loff_t *);
 long hpcap_ioctl(struct file *,unsigned int, unsigned long);
 
 
-extern int hpcap_stop_poll_threads(struct ixgbevf_adapter *);
-extern int hpcap_launch_poll_threads(struct ixgbevf_adapter *);
-extern int hpcap_unregister_chardev(struct ixgbevf_adapter *);
-extern int hpcap_register_chardev(struct ixgbevf_adapter *, u64, int);
+extern int hpcap_stop_poll_threads(HW_ADAPTER *);
+extern int hpcap_launch_poll_threads(HW_ADAPTER *);
+extern int hpcap_unregister_chardev(HW_ADAPTER *);
+extern int hpcap_register_chardev(HW_ADAPTER *, u64, u64, int);
 
 #endif

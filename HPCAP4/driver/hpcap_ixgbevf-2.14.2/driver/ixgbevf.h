@@ -58,8 +58,6 @@
 	
 #endif /* DEV_HPCAP */
 
-#define IXGBEVF_MAX_NIC 8
-
 #define PFX "ixgbevf: "
 #define DPRINTK(nlevel, klevel, fmt, args...) \
 	((void)((NETIF_MSG_##nlevel & adapter->msg_enable) && \
@@ -447,6 +445,7 @@ struct ixgbevf_adapter {
 		int work_mode;
 		int dup_mode;
 		int caplen;
+		unsigned int bufpages;
 	#endif /* DEV_HPCAP */
 
 	unsigned long state;

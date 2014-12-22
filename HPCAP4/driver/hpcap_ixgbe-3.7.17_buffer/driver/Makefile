@@ -29,7 +29,7 @@
 # Driver files
 
 # core driver files
-CFILES = ixgbe_main.c ixgbe_hpcap.c ixgbe_common.c ixgbe_api.c ixgbe_param.c \
+CFILES = ixgbe_main.c ../../common/driver_hpcap.c ixgbe_common.c ixgbe_api.c ixgbe_param.c \
          ixgbe_ethtool.c kcompat.c ixgbe_82598.c \
          ixgbe_82599.c ixgbe_x540.c \
          ixgbe_sriov.c ixgbe_mbx.c \
@@ -38,7 +38,7 @@ CFILES = ixgbe_main.c ixgbe_hpcap.c ixgbe_common.c ixgbe_api.c ixgbe_param.c \
          ixgbe_sysfs.c \
          ixgbe_procfs.c \
          ixgbe_phy.c
-HFILES = ixgbe.h ixgbe_hpcap.h ixgbe_common.h ixgbe_api.h ixgbe_osdep.h kcompat.h \
+HFILES = ixgbe.h ../../common/driver_hpcap.h ixgbe_common.h ixgbe_api.h ixgbe_osdep.h kcompat.h \
          ixgbe_sriov.h ixgbe_mbx.h \
          ixgbe_dcb.h \
          ixgbe_phy.h \
@@ -163,6 +163,10 @@ EXTRA_CFLAGS += $(shell [ -f $(KSRC)/include/linux/modversions.h ] && \
                   -include $(KSRC)/include/linux/modversions.h")
 
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
+
+#new
+EXTRA_CFLAGS += -DHPCAP_IXGBE
+
 
 RHC := $(KSRC)/include/linux/rhconfig.h
 ifneq (,$(wildcard $(RHC)))
@@ -361,13 +365,13 @@ uninstall:
 .PHONY: clean clear install
 
 clear:
+	rm -rf $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions *~
+
+clean: clear
 ifeq ($(KOBJ),$(KSRC))
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) clean
 else
 	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
 endif
-	rm -rf $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions *~
-
-clean: clear
-	rm -rf $(TARGET)
+	rm -rf $(DRIVER_NAME).ko
 

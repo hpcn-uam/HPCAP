@@ -31,6 +31,7 @@
 #include "ixgbe.h"
 #ifdef DEV_HPCAP
 	#include "../../../include/hpcap.h"
+	#include "../../common/driver_hpcap.h"
 #endif /* DEV_HPCAP */
 
 /* This is the only thing that needs to be changed to adjust the
@@ -89,11 +90,6 @@
 			MODULE_PARM_DESC(X, desc);
 	#endif
 #endif
-
-
-#ifdef DEV_HPCAP
-	IXGBE_PARAM(Core, "set the starting core to allocate receive on, default -1");
-#endif /* DEV_HPCAP */
 
 
 /* IntMode (Interrupt Mode)
@@ -155,55 +151,7 @@ IXGBE_PARAM(DCA, "Disable or enable Direct Cache Access, 0=disabled, 1=descripto
 #endif
 
 #ifdef DEV_HPCAP
-	/* RXQ - The number of RX queues
-	 *
-	 * Valid Range: 0-16
-	 *  - 0 - min(16, num_online_cpus())
-	 *  - 1-16 - sets the Desc. Q's to the specified value.
-	 *
-	 * Default Value: 1
-	 */
-	IXGBE_PARAM(RXQ, "Number of RX queues, default 1. 0 = number of cpus");
-
-	/* TXQ - The number of TX queues
-	 *
-	 * Valid Range: 0-16
-	 *  - 0 - min(16, num_online_cpus())
-	 *  - 1-16 - sets the Desc. Q's to the specified value.
-	 *
-	 * Default Value: 1
-	 */
-	IXGBE_PARAM(TXQ, "Number of TX queues, default 1. 0 = number of cpus");
-	
-	/* Mode - working mode
-	 *
-	 * Valid Range: 1-3
-	 *  - 1 - standard ixgbe behaviour
-	 *  - 2 - high performance RX
-	 *
-	 * Default Value: 1
-	 */
-	IXGBE_PARAM(Mode, "RX mode (1=standard ixgbe, 2=high performance RX). Default 1");
-	
-	/* Dup - switching duplicates policy
-	 *
-	 * Valid Range: 0-1
-	 *  - 0 - don't check for duplicated packets
-	 *  - 1 - remove witching duplicates
-	 *
-	 *  Default value: 0
-	 */
-	IXGBE_PARAM(Dup, "Dup (0=don't check, 1=remove switching duplicates). Default 0");
-
-	/* Caplen - maximum amount of bytes captured per packet
-	 *
-	 * Valid Range: >=0
-	 *  - 0 - full packet
-	 *
-	 * Default Value: 0
-	 */	
-	IXGBE_PARAM(Caplen, "Capture length (BYTES). Default 0 (full packet).");
-	
+	#include "../../common/hpcap_params_1.c"
 #else /* DEV_HPCAP */
 	/* RSS - Receive-Side Scaling (RSS) Descriptor Queues
 	 *
@@ -664,73 +612,7 @@ void ixgbe_check_options(struct ixgbe_adapter *adapter)
 	}
 #endif /* CONFIG_DCA or CONFIG_DCA_MODULE */
 
-#ifdef DEV_HPCAP
-		{ /* # of RX queues with RSS (RXQ) */
-			static struct ixgbe_option opt = {
-				.type = range_option,
-				.name = "RX queues (RXQ)",
-				.err  = "using default.",
-				.def  = 1,
-				.arg  = { .r = { .min = 0,
-						 .max = IXGBE_MAX_RSS_INDICES}}
-			};
-			unsigned int rxq = RXQ[bd];
-
-		#ifdef module_param_array
-			if ( !(num_RXQ > bd) )
-			{
-				rxq = opt.def;
-			}
-		#endif
-			switch (rxq) {
-			case 0:
-				/*
-				 * Base it off num_online_cpus() with
-				 * a hardware limit cap.
-				 */
-				rxq = min(IXGBE_MAX_RSS_INDICES,
-					  (int)num_online_cpus());
-				break;
-			default:
-				ixgbe_validate_option(&rxq, &opt);
-				break;
-			}
-			feature[RING_F_RXQ].indices = rxq;
-			*aflags |= IXGBE_FLAG_RSS_ENABLED;
-		}
-		{ /* # of TX queues (TXQ) */
-			static struct ixgbe_option opt = {
-				.type = range_option,
-				.name = "TX queues (TXQ)",
-				.err  = "using default.",
-				.def  = 1,
-				.arg  = { .r = { .min = 0,
-						 .max = IXGBE_MAX_RSS_INDICES}}
-			};
-			unsigned int txq = TXQ[bd];
-
-		#ifdef module_param_array
-			if ( !(num_TXQ > bd) )
-			{
-				txq = opt.def;
-			}
-		#endif
-			switch (txq) {
-			case 0:
-				/*
-				 * Base it off num_online_cpus() with
-				 * a hardware limit cap.
-				 */
-				txq = min(IXGBE_MAX_RSS_INDICES,
-					  (int)num_online_cpus());
-				break;
-			default:
-				ixgbe_validate_option(&txq, &opt);
-				break;
-			}
-			feature[RING_F_TXQ].indices = txq;
-		}
-#else /* DEV_HPCAP */
+#ifndef DEV_HPCAP
 		{ /* Receive-Side Scaling (RSS) */
 			static struct ixgbe_option opt = {
 				.type = range_option,
@@ -1447,117 +1329,10 @@ no_fdir_sample:
 
 		adapter->node = node_param;
 	}
+
 #ifdef DEV_HPCAP
-	{ /* CORE assignment */
-		static struct ixgbe_option opt = {
-			.type = range_option,
-			.name = "Core to copy from",
-			.err  = "defaulting to 0",
-			.def  = 0,
-			.arg  = { .r = { .min = 0,
-					 .max = (MAX_NUMNODES - 1)}}
-		};
-		int core_param = opt.def;
-
-		/* if the default was zero then we need to set the
-		 * default value to an online node, which is not
-		 * necessarily zero, and the constant initializer
-		 * above can't take first_online_node */
-		if (core_param == 0)
-			/* must set opt.def for validate */
-			opt.def = core_param = first_online_node;
-		#ifdef module_param_array
-		if (num_Core > bd)
-		{
-		#endif
-			core_param = Core[bd];
-			ixgbe_validate_option((uint *)&core_param, &opt);
-
-			if (core_param != OPTION_UNSET)
-			{
-				DPRINTK(PROBE, INFO, "core set to %d\n", core_param);
-			}
-		#ifdef module_param_array
-		}
-		#endif
-
-		adapter->core = core_param;
-		printk("PARAM: Adapter %s core = %d\n",adapter->netdev->name, adapter->core);
-	}
-	
-	{ /* Mode assignment */
-		static struct ixgbe_option opt = {
-			.type = range_option,
-			.name = "RX mode",
-			.err  = "defaulting to 1",
-			.def  = 1,
-			.arg  = { .r = { .min = 1,
-				.max = 2}}
-			};
-		int mode_param = opt.def;
-		
-		#ifdef module_param_array
-		if (num_Mode> bd)
-		{
-		#endif
-			mode_param = Mode[bd];
-			ixgbe_validate_option((uint *)&mode_param, &opt);
-		#ifdef module_param_array
-		}
-		#endif
-		
-		adapter->work_mode = mode_param;
-		printk("PARAM: Adapter %s mode = %d\n",adapter->netdev->name, adapter->work_mode);
-	}
-	
-	{ /* Dup assignment */
-		static struct ixgbe_option opt = {
-			.type = range_option,
-			.name = "Dup",
-			.err  = "defaulting to 0",
-			.def  = 0,
-			.arg  = { .r = { .min = 0,
-				.max = 1}}
-			};
-		int dup_param = opt.def;
-		
-		#ifdef module_param_array
-		if (num_Dup> bd)
-		{
-		#endif
-			dup_param = Dup[bd];
-			ixgbe_validate_option((uint *)&dup_param, &opt);
-		#ifdef module_param_array
-		}
-		#endif
-		adapter->dup_mode = dup_param;
-		printk("PARAM: Adapter %s dup = %d\n",adapter->netdev->name, adapter->dup_mode);
-	}
-		
-	{ /* Caplen assignment */
-		static struct ixgbe_option opt = {
-			.type = range_option,
-			.name = "Capture length",
-			.err  = "defaulting to 0",
-			.def  = 0,
-			.arg  = { .r = { .min = 0,
-					 .max = MAX_PACKET_SIZE}}
-		};
-		int caplen_param = opt.def;
-
-		#ifdef module_param_array
-		if (num_Caplen> bd)
-		{
-		#endif
-			caplen_param = Caplen[bd];
-			ixgbe_validate_option((uint *)&caplen_param, &opt);
-		#ifdef module_param_array
-		}
-		#endif
-
-		adapter->caplen = caplen_param;
-		printk("PARAM: Adapter %s Caplen = %d\n",adapter->netdev->name, adapter->caplen);
-	}
+	#include "../../common/hpcap_params_2.c"
 #endif /*DEV_HPCAP*/
+
 }
 

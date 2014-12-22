@@ -25,10 +25,10 @@
 # Driver files
 
 # core driver files
-CFILES = ixgbevf_main.c ixgbevf_hpcap.c ixgbevf_param.c ixgbevf_ethtool.c kcompat.c \
+CFILES = ixgbevf_main.c ../../common/driver_hpcap.c ixgbevf_param.c ixgbevf_ethtool.c kcompat.c \
          ixgbe_vf.c ixgbe_mbx.c
 HFILES = ixgbevf.h ixgbevf_hpcap.h ixgbe_vf.h ixgbe_common.h ixgbe_mbx.h \
-	 ../../../include/hpcap.h
+	 ../../../include/hpcap.h ../../common/driver_hpcap.h
 
 ifeq (,$(BUILD_KERNEL))
 BUILD_KERNEL=$(shell uname -r)
@@ -148,6 +148,9 @@ EXTRA_CFLAGS += $(shell [ -f $(KSRC)/include/linux/modversions.h ] && \
                   -include $(KSRC)/include/linux/modversions.h")
 
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
+
+#new
+EXTRA_CFLAGS += -DHPCAP_IXGBEVF
 
 RHC := $(KSRC)/include/linux/rhconfig.h
 ifneq (,$(wildcard $(RHC)))
@@ -337,3 +340,7 @@ else
 	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
 endif
 	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions
+
+clear:
+        rm -rf $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions *~
+

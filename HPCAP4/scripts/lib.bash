@@ -150,3 +150,25 @@ function set_irq_affinity()
 			echo $num > /proc/irq/${irq}/smp_affinity
 		done
 }
+function check_pages_conf()
+{
+	num=$1
+	used_pages=0
+	dir=$(read_value_param basedir)
+	total_pages=$(( $(( $(cat ${dir}/include/hpcap.h | grep HPCAP_BUF_SIZE | tail -n 1 | awk '{print $4}' | tr -d "ul") )) / $(getconf PAGESIZE) ))
+	for i in $(seq 0 $(( $num - 1 )) )
+	do
+		if [ $(read_value_param "mode${i}") -eq 2 ]
+		then
+			used_pages=$(( $used_pages + $(read_value_param "pages${i}") ))
+		fi
+	done
+	echo "There are $total_pages kernel pages available (each of $(getconf PAGESIZE) bytes)."
+	echo "$used_pages of those $total_pages pages are in use."
+	if [ $total_pages -eq $used_pages ]
+	then
+		echo 0
+	else
+		echo 1
+	fi
+}

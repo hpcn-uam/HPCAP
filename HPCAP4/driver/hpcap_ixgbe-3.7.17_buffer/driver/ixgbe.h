@@ -75,8 +75,11 @@
 	#include "../../../include/hpcap.h"
 #endif
 
-
-#define IXGBE_MAX_NIC   32
+#ifdef DEV_HPCAP
+	#define IXGBE_MAX_NIC HPCAP_MAX_NIC
+#else
+	#define IXGBE_MAX_NIC   32
+#endif
 
 
 #define PFX "ixgbe: "
@@ -605,6 +608,7 @@ struct ixgbe_adapter {
 		int work_mode;
 		int dup_mode;
 		int caplen;
+		unsigned int bufpages;
 	#endif /* DEV_HPCAP */
 
 	unsigned long state;

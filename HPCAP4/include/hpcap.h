@@ -123,12 +123,16 @@ static inline void prefetchnta(void *p)
 *  uncomment this define in order to make the
 *  buffers to dynamically allocated
 ************************************************/
-//#define REMOVE_DUPS
+#define REMOVE_DUPS
 #ifdef REMOVE_DUPS
         #define DUP_CHECK_LEN 70
+	#define SCL "70"
         #define DUP_WINDOW_SIZE (1024ul*1ul)
-	#define DUP_WINDOW_LEVELS 4
+	#define SWS "1K"
+	#define DUP_WINDOW_LEVELS 1
+	#define SWL "1"
         #define DUP_TIME_WINDOW (2ul*1000ul*1000ul*1000ul) //this value is specified in ns
+	#define STW "2000000000"
 	
 	struct hpcap_dup_info {
 		u64 tstamp;

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source scripts/lib.bash
+export PATH=${PATH}:/sbin
 
 #######################
 # PARAMS
@@ -59,6 +60,16 @@ args+="Core=$(fill_cores $nif) "
 args+="Caplen=$(fill caplen $nif) "
 args+="Mode=$(fill mode $nif) "
 args+="Dup=$(fill dup $nif) "
+args+="Pages=$(fill pages $nif)"
+check_pages_conf $nif > aux
+cat aux | head -n 2
+ret=$(cat aux | tail -n 1)
+rm aux
+if [ $ret -ne 0 ]
+then
+	echo "Please recheck your pages' configuration."
+	exit 0
+fi
 if [ $vf -eq 0 ]
 then
 	kofile="hpcap.ko"
@@ -66,7 +77,6 @@ else
 	kofile="hpcapvf.ko"
 fi
 cmd="insmod $kofile $args"
-
 
 #compile driver (if needed)
 cd  ${dir}/driver/${version}/driver

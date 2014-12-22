@@ -56,7 +56,7 @@
 
 #include "ixgbe.h"
 #ifdef DEV_HPCAP
-	#include "ixgbe_hpcap.h"
+	#include "../../common/driver_hpcap.h"
 	#include "../../../include/hpcap.h"
 #endif /* DEV_HPCAP */
 
@@ -9799,7 +9799,7 @@ err_novfs:
 
 #ifdef DEV_HPCAP
 	extern int adapters_found;
-	extern struct ixgbe_adapter * adapters[IXGBE_MAX_NIC];
+	extern struct ixgbe_adapter * adapters[HPCAP_MAX_NIC];
 #endif /* DEV_HPCAP */
 
 /**
@@ -10772,6 +10772,7 @@ bool ixgbe_is_ixgbe(struct pci_dev *pcidev)
 	#ifdef DEV_HPCAP
 		int i=0, j=0;
 		u64 num=0;
+		u64 offset=0, bufsize=0;
 		printk(KERN_INFO "ps_ixgbe: %s - version %s (PacketShader)\n", ixgbe_driver_string, ixgbe_driver_version);
 		printk(KERN_INFO "%s\n", ixgbe_copyright);
 	#else /* DEV_HPCAP */
@@ -10802,16 +10803,19 @@ bool ixgbe_is_ixgbe(struct pci_dev *pcidev)
 				num++;
 		}
 		printk("Adapters en HPCAP: %llu/%d\n", num, adapters_found);
-		for(i=0;i<adapters_found;i++)
+		offset=0;
+		for(j=0,i=0;i<adapters_found;i++)
 		{
 			if( adapters[i]->work_mode == 2 )
 			{
-				ret = hpcap_register_chardev(adapters[i], HPCAP_BUF_SIZE/num,j++);
+				bufsize = adapters[i]->bufpages*PAGE_SIZE;
+				ret = hpcap_register_chardev(adapters[i], bufsize, offset,j++);
 				if (ret )
 				{
-					printk("Error whn installing HPCAP devices\n");
+					printk("Error when installing HPCAP devices\n");
 					return -1;
 				}
+				offset += bufsize;
 			}
 		}
 	#endif /* DEV_HPCAP */

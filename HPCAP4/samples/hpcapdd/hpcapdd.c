@@ -37,6 +37,8 @@ int main(int argc, char **argv)
 	int ret=0;
 	unsigned long int i=0;
 	int ifindex=0,qindex=0;
+	uint64_t written=0;
+	int64_t wrret=0;
 
 	//struct timeval init, end;
 	struct timeval initwr;
@@ -98,7 +100,7 @@ int main(int argc, char **argv)
 			sprintf(filename, "%s/%d/%d_hpcap%d_%d.raw", argv[3],((int)initwr.tv_sec/DIRFREQ)*DIRFREQ,(int)initwr.tv_sec, ifindex,qindex);
 			/* Opening output file */
 			if( hp.bufoff == 0 )
-				fd = open(filename, O_RDWR|O_TRUNC|O_CREAT/*|O_DIRECT|O_SYNC*/, 00666);
+				fd = open(filename, O_RDWR|O_TRUNC|O_CREAT|O_DIRECT|O_SYNC, 00666);
 			else
 				fd = open(filename, O_RDWR|O_TRUNC|O_CREAT, 00666);
 			printf("filename:%s (fd=%d)\n",filename, fd);
@@ -108,16 +110,24 @@ int main(int argc, char **argv)
 				return HPCAP_ERR;
 			}
 		}
-		
-		i=0;
-		while( (!stop) && (i < HPCAP_FILESIZE) )
+	
+		written = 0;	
+		while( (!stop) && (written < HPCAP_FILESIZE) )
 		{
 			/* acumular para escribir un bloque */
 			hpcap_ack_wait_timeout( &hp, HPCAP_BS, 1000000000/*1 sec*/);
-			hpcap_write_block(&hp,fd, HPCAP_FILESIZE-i);
-			i += hp.acks;
+			if( hp.avail >= HPCAP_BS )
+			{
+				wrret = hpcap_write_block(&hp,fd, HPCAP_FILESIZE-written);
+				if( wrret < 0 )
+				{
+					printf("[ERR] Error escribiendo a disco\n");
+				}
+				else
+					written += wrret;
+			}
 		}
-		hpcap_ack( &hp);
+		hpcap_ack(&hp);
 		//gettimeofday(&endwr, NULL);
 	
 		if( fd )

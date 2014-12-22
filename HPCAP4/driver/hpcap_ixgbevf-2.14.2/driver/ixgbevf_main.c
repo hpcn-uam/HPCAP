@@ -52,7 +52,7 @@
 
 #include "ixgbevf.h"
 #ifdef DEV_HPCAP
-        #include "ixgbevf_hpcap.h"
+        #include "../../common/driver_hpcap.h"
         #include "../../../include/hpcap.h"
 #endif /* DEV_HPCAP */
 
@@ -4694,7 +4694,7 @@ static void ixgbevf_assign_netdev_ops(struct net_device *dev)
 
 #ifdef DEV_HPCAP
 	extern int adapters_found;
-	extern struct ixgbevf_adapter * adapters[IXGBEVF_MAX_NIC];
+	extern struct ixgbevf_adapter * adapters[HPCAP_MAX_NIC];
 #endif /* DEV_HPCAP */
 
 
@@ -5116,6 +5116,7 @@ static int __init ixgbevf_init_module(void)
 	#ifdef DEV_HPCAP
 		int i=0, j=0;
 		u64 num=0;
+		u64 offset=0, bufsize=0;
 		printk(KERN_INFO "hpcapvf: %s - version %s \n", ixgbevf_driver_string, ixgbevf_driver_version);
 	#else /* DEV_HPCAP */
 		printk(KERN_INFO "ixgbevf: %s - version %s\n", ixgbevf_driver_string, ixgbevf_driver_version);
@@ -5141,12 +5142,14 @@ static int __init ixgbevf_init_module(void)
 		{
 			if( adapters[i]->work_mode == 2 )
 			{
-				ret = hpcap_register_chardev(adapters[i], HPCAP_BUF_SIZE/num,j++);
+				bufsize = adapters[i]->bufpages*PAGE_SIZE;
+				ret = hpcap_register_chardev(adapters[i], bufsize, offset, j++);
 				if( ret )
 				{
 					printk("Error whn installing HPCAP devices\n");
 					return -1;
 				}
+				offset += bufsize;
 			}
 		}
 	#endif /* DEV_HPCAP */
